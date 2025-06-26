@@ -1,0 +1,56 @@
+// 📅 Feuille de route personnalisée - Application Tutorapp (Next.js + Prisma)
+
+/**
+ * 🔀 Phase 1 : Initialisation technique
+ */
+// ✅ Setup Git & repo GitHub
+// ✅ create-next-app + TypeScript
+// ✅ Intégration Tailwind CSS
+// ✅ Setup Prisma + PostgreSQL (via Supabase, Railway, etc.)
+// ✅ Création du fichier `schema.prisma`
+// ✅ `migrate dev` puis `generate`
+// ✅ Prisma Studio accessible
+
+/**
+ * 🛠️ Phase 2 : Fonctionnalités de base
+ */
+
+// ✅ 1. Création d'étudiants
+//    - [x] API Route POST /api/students
+//    - [ ] Formulaire React AddStudentForm.tsx
+//    - [ ] Affichage des étudiants
+
+// ☑️ 2. Création de cours
+//    - [ ] Modèle Course (déjà dans Prisma)
+//    - [ ] API Route POST /api/courses
+//    - [ ] Formulaire + liste des cours
+
+// ☑️ 3. Gestion des leçons (sessions de tutorat)
+//    - [ ] API POST /api/lessons
+//    - [ ] Vue calendrier ou tableau
+
+// ☑️ 4. Authentification
+//    - [ ] Intégration de NextAuth.js (connexion email + providers)
+//    - [ ] Gestion du contexte utilisateur (useSession)
+
+/**
+ * 🚀 Phase 3 : Expérience utilisateur & dashboard
+ */
+// ☑️ Page d'accueil (public)
+// ☑️ Dashboard tuteur (récap, raccourcis)
+// ☑️ Filtrage + recherche + responsive design
+
+/**
+ * 🌐 Phase 4 : Déploiement
+ */
+// ☑️ Vercel (frontend + API)
+// ☑️ Railway ou Supabase pour la base PostgreSQL
+// ☑️ Variables d'environnement .env.production
+
+/**
+ * 📝 Phase 5 : Améliorations futures
+ */
+// - Ajout de notifications email / SMS
+// - Intégration calendrier externe (Google Calendar)
+// - Export PDF des leçons ou factures
+// - Application mobile (Next.js App Router + Expo ?)

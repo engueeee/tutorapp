@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String 
+  firstName String   
+  lastName  String   
+  role      String   @default("tutor")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  courses   Course[] // 👈 relation inverse
+  students  Student[]
+  lessons   Lesson[]
+}
+
+model Course {
+  id        String   @id @default(cuid())
+  title     String
+  description String
+
+  tutor     User     @relation(fields: [tutorId], references: [id])
+  tutorId   String
+  
+  createdAt DateTime @default(now())
+}
+
+model Student {
+  id        String   @id @default(cuid())
+  firstName String   
+  lastName  String   
+  age       Int
+  contact   String
+  grade     String
+  createdAt DateTime @default(now())
+
+  tutor     User     @relation(fields: [tutorId], references: [id])
+  tutorId   String
+  lessons  Lesson[]
+
+}
+
+model Lesson {
+  id        String   @id @default(cuid())
+  date      String
+  startTime String
+  duration  String
+  zoomLink  String
+  subject   String?
+
+  createdAt DateTime @default(now())
+
+  tutor     User     @relation(fields: [tutorId], references: [id])
+  tutorId   String
+
+  student   Student  @relation(fields: [studentId], references: [id])
+  studentId String
+}
+
+
