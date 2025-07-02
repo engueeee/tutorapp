@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface Student {
   id: string;
@@ -36,13 +37,21 @@ export function AddCourseForm({ tutorId }: AddCourseFormProps) {
   const onSubmit = async (data: any) => {
     setLoading(true);
     try {
+      // Ensure studentIds is always an array
+      const studentIds = Array.isArray(data.studentIds)
+        ? data.studentIds
+        : data.studentIds
+        ? [data.studentIds]
+        : [];
+
       const res = await fetch("/api/courses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...data,
           tutorId,
-          studentIds: data.studentIds || [],
+          studentIds,
+          zoomLink: data.zoomLink || "",
         }),
       });
 
@@ -62,40 +71,55 @@ export function AddCourseForm({ tutorId }: AddCourseFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <Input placeholder="Titre du cours" {...register("title")} />
-      <Textarea
-        placeholder="Description (optionnel)"
-        {...register("description")}
-      />
-      <Input type="date" {...register("date")} />
-      <Input type="time" {...register("startTime")} />
-      <Input placeholder="Durée (ex: 1h)" {...register("duration")} />
-      <Input placeholder="Lien Zoom (optionnel)" {...register("zoomLink")} />
-      <Input
-        placeholder="Sujet du cours (optionnel)"
-        {...register("subject")}
-      />
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle>Ajouter un cours</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <Input placeholder="Titre du cours" {...register("title")} />
+          <Textarea
+            placeholder="Description (optionnel)"
+            {...register("description")}
+          />
+          <div className="grid grid-cols-2 gap-4">
+            <Input type="date" {...register("date")} />
+            <Input type="time" {...register("startTime")} />
+          </div>
+          <Input placeholder="Durée (ex: 1h)" {...register("duration")} />
+          <Input
+            placeholder="Lien Zoom (optionnel)"
+            {...register("zoomLink")}
+          />
+          <Input
+            placeholder="Sujet du cours (optionnel)"
+            {...register("subject")}
+          />
 
-      <div className="space-y-2">
-        <label className="font-medium">Sélectionnez les élèves :</label>
-        {students.map((student) => (
-          <label key={student.id} className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              value={student.id}
-              {...register("studentIds")}
-            />
-            <span>
-              {student.firstName} {student.lastName}
-            </span>
-          </label>
-        ))}
-      </div>
-
-      <Button type="submit" disabled={loading}>
-        {loading ? "Création en cours..." : "Créer le cours"}
-      </Button>
-    </form>
+          <div className="space-y-2">
+            <label className="font-medium">Sélectionnez les élèves :</label>
+            <div className="grid grid-cols-2 gap-2">
+              {students.map((student) => (
+                <label key={student.id} className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    value={student.id}
+                    {...register("studentIds")}
+                  />
+                  <span>
+                    {student.firstName} {student.lastName}
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center">
+            <Button type="submit" disabled={loading} className="w-50">
+              {loading ? "Création en cours..." : "Créer le cours"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }
