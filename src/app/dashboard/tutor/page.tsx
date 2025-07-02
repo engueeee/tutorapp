@@ -6,9 +6,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { AddStudentForm } from "@/components/forms/AddStudentForm";
 import { StudentManager } from "@/components/dashboard/StudentManager";
+import { LogoutButton } from "@/components/auth/LogoutButton";
+import { AddCourseForm } from "@/components/courses/AddCourseForm";
 
 export default function TutorDashboard() {
   const { user } = useAuth();
@@ -70,13 +70,17 @@ export default function TutorDashboard() {
 
   return (
     <main className="p-6 space-y-8">
-      <h1 className="text-2xl font-bold">Dashboard</h1>
+      <div className="flex items-center justify-between ">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <LogoutButton />
+      </div>
       <p className="text-muted-foreground">
         Welcome back, {user.firstName} {user.lastName}
       </p>
 
       <section>
         <h2 className="text-lg font-semibold mb-4">Current Courses</h2>
+        <AddCourseForm tutorId={user.id} />
         <Card>
           <CardContent className="overflow-x-auto">
             <table className="w-full text-sm">

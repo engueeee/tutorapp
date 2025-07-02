@@ -51,9 +51,12 @@ model Student {
 model Lesson {
   id        String   @id @default(cuid())
   date      String
+  title     String
+  description String?
+  
   startTime String
   duration  String
-  zoomLink  String
+  zoomLink  String?
   subject   String?
 
   createdAt DateTime @default(now())
@@ -64,5 +67,4 @@ model Lesson {
   student   Student  @relation(fields: [studentId], references: [id])
   studentId String
 }
-
 

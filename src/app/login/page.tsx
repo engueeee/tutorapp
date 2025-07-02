@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { LoginForm } from "@/components/forms/LoginForm";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const { setUser, setToken, user } = useAuth();
@@ -39,6 +40,9 @@ export default function LoginPage() {
       localStorage.setItem("token", result.token);
       localStorage.setItem("user", JSON.stringify(result.user));
       router.replace(`/dashboard/${result.user.role}`);
+      toast.success("Bienvenue !", {
+        description: `${result.user?.firstName} ${result.user?.lastName} !.`,
+      });
     } catch (err: any) {
       setError(err.message);
     } finally {

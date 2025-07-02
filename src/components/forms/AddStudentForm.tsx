@@ -9,6 +9,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { createStudent } from "@/hooks/useCreateStudent";
+import { toast } from "sonner";
 
 const studentSchema = z.object({
   firstName: z.string().min(1, "Champ requis"),
@@ -42,7 +43,9 @@ export function AddStudentForm({
       await createStudent({ ...data, tutorId });
       reset();
       if (onStudentAdded) onStudentAdded();
-      alert("Étudiant ajouté avec succès.");
+      toast.success("Ajout effectué avec succès", {
+        description: `${data?.firstName} ${data?.lastName} est votre nouvel élève !`,
+      });
     } catch (err) {
       console.error("Erreur lors de l'ajout de l'étudiant", err);
       alert("Une erreur est survenue.");
