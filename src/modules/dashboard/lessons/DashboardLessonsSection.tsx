@@ -24,30 +24,44 @@ interface Lesson {
   };
 }
 
-export function DashboardLessonsSection({ tutorId }: { tutorId: string }) {
+interface DashboardLessonsSectionProps {
+  tutorId: string;
+  onLessonsChanged?: () => void;
+}
+
+export function DashboardLessonsSection({
+  tutorId,
+  onLessonsChanged,
+}: DashboardLessonsSectionProps) {
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchLessons() {
-      setLoading(true);
-      try {
-        const res = await fetch(`/api/lessons?tutorId=${tutorId}`);
-        if (res.ok) {
-          const data = await res.json();
-          setLessons(data);
-        }
-      } catch (error) {
-        console.error("Error fetching lessons:", error);
-      } finally {
-        setLoading(false);
+  const fetchLessons = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/lessons?tutorId=${tutorId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setLessons(data);
       }
+    } catch (error) {
+      console.error("Error fetching lessons:", error);
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     if (tutorId) {
       fetchLessons();
     }
   }, [tutorId]);
+
+  // Handler to refresh lessons and notify parent
+  const handleLessonsChanged = () => {
+    fetchLessons();
+    if (onLessonsChanged) onLessonsChanged();
+  };
 
   if (loading) {
     return (
@@ -65,5 +79,7 @@ export function DashboardLessonsSection({ tutorId }: { tutorId: string }) {
     );
   }
 
-  return <LessonsList lessons={lessons} />;
+  return (
+    <LessonsList lessons={lessons} onLessonsChanged={handleLessonsChanged} />
+  );
 }

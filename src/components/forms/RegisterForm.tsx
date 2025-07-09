@@ -111,7 +111,12 @@ export function RegisterForm() {
         )}
       </div>
 
-      <Button type="submit" disabled={loading} className="w-full">
+      <Button
+        type="submit"
+        disabled={loading}
+        variant="primary"
+        className="w-full"
+      >
         {loading ? "Inscription..." : "S'inscrire"}
       </Button>
 

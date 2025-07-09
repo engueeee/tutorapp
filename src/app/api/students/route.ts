@@ -6,25 +6,49 @@ import { prisma } from "@/lib/prisma";
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const tutorId = searchParams.get("tutorId");
+  const userId = searchParams.get("userId");
 
-  if (!tutorId) {
-    return NextResponse.json({ error: "Missing tutorId" }, { status: 400 });
+  if (!tutorId && !userId) {
+    return NextResponse.json(
+      { error: "Missing tutorId or userId" },
+      { status: 400 }
+    );
   }
 
   try {
-    const students = await prisma.student.findMany({
-      where: { tutorId },
-      select: {
-        id: true,
-        firstName: true,
-        lastName: true,
-        age: true,
-        contact: true,
-        grade: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    let students;
+
+    if (tutorId) {
+      // Fetch students by tutor
+      students = await prisma.student.findMany({
+        where: { tutorId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          age: true,
+          email: true,
+          grade: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    } else {
+      // Fetch student by user ID
+      students = await prisma.student.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          age: true,
+          email: true,
+          grade: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    }
 
     return NextResponse.json(students);
   } catch (err) {
@@ -39,7 +63,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { firstName, lastName, age, contact, grade, tutorId } = body;
+    const { firstName, lastName, age, email, grade, tutorId } = body;
 
     if (
       typeof firstName !== "string" ||
@@ -57,7 +81,7 @@ export async function POST(req: NextRequest) {
         firstName,
         lastName,
         age,
-        contact: contact ?? null,
+        email: email ?? null,
         grade: grade ?? null,
         tutorId,
       },

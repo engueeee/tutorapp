@@ -18,7 +18,8 @@ model User {
   updatedAt DateTime @updatedAt
 
   courses   Course[] // 👈 relation inverse
-  students  Student[]
+  students  Student[] @relation("TutorStudents") // Students created by this tutor
+  studentAccount Student? @relation("UserStudentAccount") // Student account linked to this user (for self-registered students)
   lessons   Lesson[]
 }
 
@@ -32,21 +33,27 @@ model Course {
   
   createdAt   DateTime @default(now())
   lessons     Lesson[]  
+  courseStudents CourseStudent[]
 }
 
 model Student {
   id        String   @id @default(cuid())
   firstName String   
   lastName  String   
-  age       Int
-  contact   String
-  grade     String
+  age       Int?
+  contact   String?
+  grade     String?
+  email     String?  @unique // Email for linking with user accounts
   createdAt DateTime @default(now())
 
-  tutor     User     @relation(fields: [tutorId], references: [id])
-  tutorId   String
+  tutor     User?    @relation("TutorStudents", fields: [tutorId], references: [id]) // Optional - for tutor-created students
+  tutorId   String?
+  
+  user      User?    @relation("UserStudentAccount", fields: [userId], references: [id]) // Optional - for self-registered students
+  userId    String?  @unique
+  
   lessons   Lesson[]
-
+  courseStudents CourseStudent[]
 }
 
 model Lesson {
@@ -65,10 +72,21 @@ model Lesson {
   tutor       User     @relation(fields: [tutorId], references: [id])
   tutorId     String
 
-  student     Student  @relation(fields: [studentId], references: [id])
-  studentId   String
-
   course      Course   @relation(fields: [courseId], references: [id])
   courseId    String
+
+  student     Student  @relation(fields: [studentId], references: [id])
+  studentId   String
+  
+}
+
+model CourseStudent {
+  courseId String
+  studentId String
+
+  course Course @relation(fields: [courseId], references: [id])
+  student Student @relation(fields: [studentId], references: [id])
+
+  @@id([courseId, studentId])
 }
 

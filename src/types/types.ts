@@ -5,7 +5,7 @@ export interface Student {
   firstName: string;
   lastName: string;
   age: number;
-  contact?: string;
+  email?: string;
   grade?: string;
 }
 
@@ -14,7 +14,7 @@ export type StudentForm = {
   firstName: string;
   lastName: string;
   age: string;
-  contact: string;
+  email: string;
   grade: string;
 };
 
@@ -23,7 +23,7 @@ export type StudentPayload = {
   firstName: string;
   lastName: string;
   age: number;
-  contact: string;
+  email: string;
   grade: string;
   tutorId: string;
 };

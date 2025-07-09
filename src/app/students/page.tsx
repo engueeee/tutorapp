@@ -3,7 +3,6 @@ import { useAuth } from "@/context/AuthContext";
 
 export default function StudentsPage() {
   const { user } = useAuth();
-  console.log("user StudentsPage", user);
 
   if (!user) return null;
 

@@ -21,7 +21,7 @@ export function UpcomingLessons({ lessons }: UpcomingLessonsProps) {
                 {lesson.date} at {lesson.startTime}
               </p>
               <a
-                href={lesson.zoomLink}
+                href={lesson.zoomLink || undefined}
                 className="text-blue-600 text-sm underline"
               >
                 Join on Zoom

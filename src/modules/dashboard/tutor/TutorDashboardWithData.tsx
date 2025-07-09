@@ -1,46 +1,60 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { TutorDashboardModule } from "./TutorDashboardModule";
 import { DashboardLessonsSection } from "../lessons/DashboardLessonsSection";
-import { Course } from "../types";
+import { Course, Student } from "../types";
 
 export function TutorDashboardWithData() {
   const { user } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshFlag, setRefreshFlag] = useState(0);
 
-  useEffect(() => {
-    async function fetchCourses() {
-      if (!user) return;
-
-      setLoading(true);
-      try {
-        const res = await fetch(
-          `/api/courses?tutorId=${user.id}&includeStudents=true`
-        );
-        if (res.ok) {
-          const data = await res.json();
-          // Transform the data to match the Course interface
-          const transformedCourses = data.map((course: any) => ({
-            title: course.title,
-            students: course.studentCount || 0,
-            status: "Active" as const,
-          }));
-          setCourses(transformedCourses);
-        }
-      } catch (error) {
-        console.error("Error fetching courses:", error);
-      } finally {
-        setLoading(false);
+  const fetchCourses = useCallback(async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `/api/courses?tutorId=${user.id}&includeStudents=true&includeLessons=true`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        // Expect data to be Course[] with students: Student[] and lessons: Lesson[]
+        setCourses(data);
       }
+    } catch (error) {
+      console.error("Error fetching courses:", error);
+    } finally {
+      setLoading(false);
     }
-
-    fetchCourses();
   }, [user]);
 
-  if (!user) return null;
+  useEffect(() => {
+    fetchCourses();
+  }, [fetchCourses, refreshFlag]);
+
+  // Handler for when lessons are created/updated
+  const handleLessonsChanged = useCallback(() => {
+    fetchCourses();
+  }, [fetchCourses]);
+
+  // Handler for when students are added
+  const handleStudentAdded = useCallback(() => {
+    setRefreshFlag((prev) => prev + 1);
+  }, []);
+
+  if (!user || !user.id) {
+    console.error("TutorDashboardWithData: User or user.id is null/undefined");
+    return (
+      <div className="p-6">
+        <div className="text-red-600">
+          Erreur: Impossible de charger les données utilisateur.
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -65,11 +79,13 @@ export function TutorDashboardWithData() {
         lastName={user.lastName || ""}
         tutorId={user.id}
         courses={courses}
+        onStudentAdded={handleStudentAdded}
       />
-
-      {/* Lessons Section */}
       <div className="p-6">
-        <DashboardLessonsSection tutorId={user.id} />
+        <DashboardLessonsSection
+          tutorId={user.id}
+          onLessonsChanged={handleLessonsChanged}
+        />
       </div>
     </div>
   );

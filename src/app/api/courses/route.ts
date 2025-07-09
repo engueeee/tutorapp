@@ -8,121 +8,187 @@ import { z } from "zod";
 const CreateCourseSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  date: z.string().min(1, "Date is required"),
-  duration: z.string().min(1, "Duration is required"),
-  zoomLink: z.string().optional().or(z.literal("")),
   tutorId: z.string().min(1, "Tutor ID is required"),
-  studentIds: z
-    .union([z.string(), z.array(z.string())])
-    .transform((val) => (Array.isArray(val) ? val : val ? [val] : []))
-    .refine((val) => val.length > 0, "At least one student is required"),
-  subject: z.string().min(1, "Subject is required"),
-  startTime: z.string().min(1, "Start time is required"),
+  studentIds: z.array(z.string()).min(1, "At least one student is required"),
 });
 
 const GetCoursesQuerySchema = z.object({
-  tutorId: z.string().min(1, "Tutor ID is required"),
+  tutorId: z.string().optional(),
+  studentId: z.string().optional(),
   includeStudents: z.boolean().optional().default(true),
   includeLessons: z.boolean().optional().default(false),
 });
 
-// 🔍 GET : récupérer tous les cours avec les leçons et étudiants
+// GET: fetch all courses for a tutor or student, with students and lessons
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
+    const tutorId = searchParams.get("tutorId");
+    const studentId = searchParams.get("studentId");
+    const courseId = searchParams.get("courseId");
+    const includeStudents = searchParams.get("includeStudents") === "true";
+    const includeLessons = searchParams.get("includeLessons") === "true";
 
-    // Debug: Log the request details
-    console.log("[API/COURSES][GET] Request URL:", req.url);
-    console.log(
-      "[API/COURSES][GET] Search params:",
-      Object.fromEntries(searchParams.entries())
-    );
-    console.log("[API/COURSES][GET] Referer:", req.headers.get("referer"));
-    console.log(
-      "[API/COURSES][GET] User-Agent:",
-      req.headers.get("user-agent")
-    );
+    console.log("Courses API: Request parameters:");
+    console.log("  - tutorId:", tutorId, "(type:", typeof tutorId, ")");
+    console.log("  - studentId:", studentId, "(type:", typeof studentId, ")");
+    console.log("  - courseId:", courseId, "(type:", typeof courseId, ")");
+    console.log("  - includeStudents:", includeStudents);
+    console.log("  - includeLessons:", includeLessons);
 
-    // Validate query parameters
-    const queryResult = GetCoursesQuerySchema.safeParse({
-      tutorId: searchParams.get("tutorId"),
-      includeStudents: searchParams.get("includeStudents") === "true",
-      includeLessons: searchParams.get("includeLessons") === "true",
-    });
-
-    if (!queryResult.success) {
-      console.log(
-        "[API/COURSES][GET] Validation failed:",
-        queryResult.error.errors
-      );
+    // Validate tutorId if provided
+    if (
+      tutorId !== null &&
+      (tutorId.trim() === "" || tutorId === "null" || tutorId === "undefined")
+    ) {
+      console.error("Courses API: Invalid tutorId provided:", tutorId);
       return NextResponse.json(
         {
-          error: "Invalid query parameters",
-          details: queryResult.error.errors,
+          error: "Invalid tutorId provided",
+          details: [
+            {
+              code: "invalid_type",
+              expected: "string",
+              received: "null",
+              path: ["tutorId"],
+              message: "Expected string, received null",
+            },
+          ],
         },
         { status: 400 }
       );
     }
 
-    const { tutorId, includeStudents, includeLessons } = queryResult.data;
+    // Validate studentId if provided
+    if (
+      studentId !== null &&
+      (studentId.trim() === "" ||
+        studentId === "null" ||
+        studentId === "undefined")
+    ) {
+      console.error("Courses API: Invalid studentId provided:", studentId);
+      return NextResponse.json(
+        {
+          error: "Invalid studentId provided",
+          details: [
+            {
+              code: "invalid_type",
+              expected: "string",
+              received: "null",
+              path: ["studentId"],
+              message: "Expected string, received null",
+            },
+          ],
+        },
+        { status: 400 }
+      );
+    }
 
-    // Build the include object dynamically
-    const include: any = {};
-    if (includeLessons) {
-      include.lessons = {
-        include: includeStudents ? { student: true } : false,
+    const whereClause: any = {};
+
+    if (tutorId) {
+      whereClause.tutorId = tutorId;
+    }
+
+    if (courseId) {
+      whereClause.id = courseId;
+    }
+
+    if (studentId) {
+      console.log(
+        "Courses API: Looking for courses with studentId:",
+        studentId
+      );
+
+      // First, let's check if the student exists
+      const student = await prisma.student.findUnique({
+        where: { id: studentId },
+        include: { courseStudents: { include: { course: true } } },
+      });
+
+      console.log("Courses API: Student found:", student ? "Yes" : "No");
+      if (student) {
+        console.log(
+          "Courses API: Student courseStudents count:",
+          student.courseStudents.length
+        );
+        console.log(
+          "Courses API: Student courseStudents:",
+          student.courseStudents.map((cs) => ({
+            courseId: cs.courseId,
+            courseTitle: cs.course.title,
+          }))
+        );
+      }
+
+      whereClause.courseStudents = {
+        some: {
+          studentId: studentId,
+        },
       };
     }
 
+    // Ensure at least one filter is provided
+    if (!tutorId && !studentId) {
+      console.error("Courses API: No tutorId or studentId provided");
+      return NextResponse.json(
+        { error: "Either tutorId or studentId is required" },
+        { status: 400 }
+      );
+    }
+
+    console.log("Courses API: Final where clause:", whereClause);
+
     const courses = await prisma.course.findMany({
-      where: { tutorId },
-      include,
+      where: whereClause,
+      include: {
+        tutor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        lessons: includeLessons
+          ? {
+              include: {
+                student: true,
+              },
+            }
+          : false,
+        courseStudents: includeStudents
+          ? { include: { student: true } }
+          : false,
+      },
       orderBy: { createdAt: "desc" },
     });
 
-    // If we need students but didn't include lessons, fetch them separately
-    let formatted: any[] = courses;
-    if (includeStudents && !includeLessons) {
-      formatted = await Promise.all(
-        courses.map(async (course) => {
-          const lessons = await prisma.lesson.findMany({
-            where: { courseId: course.id },
-            include: { student: true },
-          });
+    console.log("Courses API: Found courses count:", courses.length);
+    console.log(
+      "Courses API: First course (if any):",
+      courses[0] || "No courses found"
+    );
 
-          // Remove duplicates based on student ID
-          const uniqueStudents = lessons
-            .map((lesson) => lesson.student)
-            .filter(
-              (student, index, self) =>
-                index === self.findIndex((s) => s.id === student.id)
-            );
-
-          return {
-            ...course,
-            students: uniqueStudents,
-            studentCount: uniqueStudents.length,
-            status: "Active", // This could be calculated based on lessons dates
-          };
-        })
-      );
-    } else if (includeLessons && includeStudents) {
-      // Format courses with lessons and students
-      formatted = courses.map((course) => ({
+    // Transform the data to match frontend expectations
+    const transformedCourses = courses.map((course: any) => {
+      const transformedCourse = {
         ...course,
-        studentCount: course.lessons?.length || 0,
-        status: "Active",
-      }));
-    } else {
-      // Just add basic info
-      formatted = courses.map((course) => ({
-        ...course,
-        studentCount: 0,
-        status: "Active",
-      }));
-    }
+        // Transform courseStudents to students array
+        students: course.courseStudents
+          ? course.courseStudents.map((cs: any) => cs.student)
+          : [],
+        // Keep courseStudents for backward compatibility
+        courseStudents: course.courseStudents || [],
+      };
 
-    return NextResponse.json(formatted);
+      // Remove courseStudents from the main object to avoid confusion
+      delete transformedCourse.courseStudents;
+
+      return transformedCourse;
+    });
+
+    return NextResponse.json(transformedCourses);
   } catch (err) {
     console.error("[API/COURSES][GET]", err);
     return NextResponse.json(
@@ -132,14 +198,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// 📝 POST : création d'un cours + leçons pour chaque élève
+// POST: create a course and assign students
 export async function POST(req: NextRequest) {
   try {
-    console.log("[API/COURSES][POST] Request received");
     const body = await req.json();
-    console.log("[API/COURSES][POST] Request body:", body);
-
-    // Validate request body
     const validationResult = CreateCourseSchema.safeParse(body);
     if (!validationResult.success) {
       return NextResponse.json(
@@ -150,93 +212,52 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-
-    const {
-      title,
-      description,
-      date,
-      duration,
-      zoomLink,
-      tutorId,
-      studentIds,
-      subject,
-      startTime,
-    } = validationResult.data;
-
-    // Verify tutor exists
-    const tutor = await prisma.user.findUnique({
-      where: { id: tutorId, role: "tutor" },
-    });
-
-    if (!tutor) {
-      return NextResponse.json({ error: "Tutor not found" }, { status: 404 });
-    }
-
-    // Verify all students exist and belong to the tutor
-    const students = await prisma.student.findMany({
-      where: {
-        id: { in: studentIds },
+    const { title, description, tutorId, studentIds } = validationResult.data;
+    // Create course first
+    const course = await prisma.course.create({
+      data: {
+        title,
+        description,
         tutorId,
+      },
+      include: {
+        lessons: true,
+        courseStudents: { include: { student: true } },
+      },
+    });
+    // Create CourseStudent join records
+    await prisma.courseStudent.createMany({
+      data: studentIds.map((studentId: string) => ({
+        courseId: course.id,
+        studentId,
+      })),
+    });
+    // Refetch course with students
+    const courseWithStudents = await prisma.course.findUnique({
+      where: { id: course.id },
+      include: {
+        lessons: true,
+        courseStudents: { include: { student: true } },
       },
     });
 
-    if (students.length !== studentIds.length) {
-      return NextResponse.json(
-        { error: "Some students not found or don't belong to this tutor" },
-        { status: 400 }
-      );
-    }
+    // Transform the data to match frontend expectations
+    const transformedCourse = {
+      ...courseWithStudents,
+      // Transform courseStudents to students array
+      students: courseWithStudents?.courseStudents
+        ? courseWithStudents.courseStudents.map((cs: any) => cs.student)
+        : [],
+    };
 
-    // Use transaction to ensure data consistency
-    const result = await prisma.$transaction(async (tx) => {
-      // Create course
-      const course = await tx.course.create({
-        data: {
-          title,
-          description,
-          tutorId,
-        },
-      });
+    // Remove courseStudents from the main object to avoid confusion
+    delete transformedCourse.courseStudents;
 
-      // Create lessons for each student
-      const lessons = await Promise.all(
-        studentIds.map((studentId) =>
-          tx.lesson.create({
-            data: {
-              date,
-              duration,
-              startTime,
-              zoomLink: zoomLink || null,
-              subject,
-              tutorId,
-              studentId,
-              courseId: course.id,
-              title,
-              description,
-            },
-          })
-        )
-      );
-
-      return { course, lessons };
-    });
-
-    return NextResponse.json(result, { status: 201 });
+    return NextResponse.json(transformedCourse, { status: 201 });
   } catch (err) {
     console.error("[API/COURSES][POST]", err);
-
-    // Handle specific Prisma errors
-    if (err instanceof Error) {
-      if (err.message.includes("Unique constraint")) {
-        return NextResponse.json(
-          { error: "Course with this title already exists for this tutor" },
-          { status: 409 }
-        );
-      }
-    }
-
     return NextResponse.json(
-      { error: "Failed to create course and lessons" },
+      { error: "Failed to create course" },
       { status: 500 }
     );
   }
@@ -289,6 +310,86 @@ export async function DELETE(req: NextRequest) {
     console.error("[API/COURSES][DELETE]", err);
     return NextResponse.json(
       { error: "Failed to delete course" },
+      { status: 500 }
+    );
+  }
+}
+
+// PATCH: link students to an existing course
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const { courseId, studentIds, tutorId } = body;
+
+    if (!courseId || !tutorId || !studentIds || !Array.isArray(studentIds)) {
+      return NextResponse.json(
+        { error: "courseId, tutorId, and studentIds array are required" },
+        { status: 400 }
+      );
+    }
+
+    // Verify course exists and belongs to tutor
+    const course = await prisma.course.findFirst({
+      where: { id: courseId, tutorId },
+    });
+
+    if (!course) {
+      return NextResponse.json(
+        { error: "Course not found or access denied" },
+        { status: 404 }
+      );
+    }
+
+    // Verify all students exist and belong to the tutor
+    const students = await prisma.student.findMany({
+      where: {
+        id: { in: studentIds },
+        tutorId: tutorId,
+      },
+    });
+
+    if (students.length !== studentIds.length) {
+      return NextResponse.json(
+        { error: "Some students not found or don't belong to this tutor" },
+        { status: 400 }
+      );
+    }
+
+    // Create CourseStudent join records
+    await prisma.courseStudent.createMany({
+      data: studentIds.map((studentId: string) => ({
+        courseId: courseId,
+        studentId,
+      })),
+      skipDuplicates: true, // Skip if already linked
+    });
+
+    // Refetch course with updated students
+    const updatedCourse = await prisma.course.findUnique({
+      where: { id: courseId },
+      include: {
+        lessons: true,
+        courseStudents: { include: { student: true } },
+      },
+    });
+
+    // Transform the data to match frontend expectations
+    const transformedCourse = {
+      ...updatedCourse,
+      // Transform courseStudents to students array
+      students: updatedCourse?.courseStudents
+        ? updatedCourse.courseStudents.map((cs: any) => cs.student)
+        : [],
+    };
+
+    // Remove courseStudents from the main object to avoid confusion
+    delete transformedCourse.courseStudents;
+
+    return NextResponse.json(transformedCourse);
+  } catch (err) {
+    console.error("[API/COURSES][PATCH]", err);
+    return NextResponse.json(
+      { error: "Failed to link students to course" },
       { status: 500 }
     );
   }

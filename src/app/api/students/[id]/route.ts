@@ -8,13 +8,22 @@ export async function PATCH(
 ) {
   const studentId = params.id; // ✅ sans await
 
-  const { firstName, lastName, age, contact, grade } = await req.json();
+  const { firstName, lastName, age, email, grade } = await req.json();
+
+  console.log("PATCH student with data:", {
+    firstName,
+    lastName,
+    age,
+    email,
+    grade,
+  });
 
   try {
     const updated = await prisma.student.update({
       where: { id: studentId },
-      data: { firstName, lastName, age, contact, grade },
+      data: { firstName, lastName, age, email, grade },
     });
+    console.log("Student updated successfully:", updated);
     return NextResponse.json(updated);
   } catch (err) {
     console.error("[PATCH_STUDENT]", err);

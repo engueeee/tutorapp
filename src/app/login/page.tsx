@@ -35,7 +35,6 @@ export default function LoginPage() {
 
       setToken(result.token);
       setUser(result.user);
-      console.log("Result : ", result);
 
       localStorage.setItem("token", result.token);
       localStorage.setItem("user", JSON.stringify(result.user));

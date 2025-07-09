@@ -8,6 +8,7 @@ interface TutorDashboardModuleProps {
   lastName: string;
   tutorId: string;
   courses: Course[];
+  onStudentAdded?: () => void;
 }
 
 export function TutorDashboardModule({
@@ -15,12 +16,13 @@ export function TutorDashboardModule({
   lastName,
   tutorId,
   courses,
+  onStudentAdded,
 }: TutorDashboardModuleProps) {
   return (
     <main className="p-6 space-y-8">
       <TutorDashboardHeader firstName={firstName} lastName={lastName} />
       <CoursesSection courses={courses} tutorId={tutorId} />
-      <StudentManager tutorId={tutorId} />
+      <StudentManager tutorId={tutorId} onStudentAdded={onStudentAdded} />
     </main>
   );
 }

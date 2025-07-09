@@ -4,11 +4,24 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { TutorDashboardWithData } from "@/modules/dashboard/tutor/TutorDashboardWithData";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function TutorDashboard() {
   const { user } = useAuth();
+  const router = useRouter();
 
-  if (!user) return null;
+  useEffect(() => {
+    if (user && user.role !== "tutor") {
+      if (user.role === "student") {
+        router.replace("/dashboard/student");
+      } else {
+        router.replace("/login");
+      }
+    }
+  }, [user, router]);
+
+  if (!user || user.role !== "tutor") return null;
 
   return <TutorDashboardWithData />;
 }

@@ -38,7 +38,7 @@ export function LoginForm({ onLogin, loading, error }: Props) {
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 
-      <Button type="submit" disabled={loading}>
+      <Button type="submit" disabled={loading} variant="primary">
         {loading ? "Connexion..." : "Se connecter"}
       </Button>
     </form>

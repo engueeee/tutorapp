@@ -30,7 +30,6 @@ export default function RegisterPage() {
         setError(result.error || "Erreur inconnue");
         return;
       }
-      console.log("data", result);
       router.push(`/dashboard/${result.user.role}`);
     } catch (err) {
       setError("Erreur lors de l'inscription");

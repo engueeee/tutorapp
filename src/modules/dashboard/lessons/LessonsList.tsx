@@ -9,7 +9,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LessonCard } from "./LessonCard";
-import { Search, Filter, Calendar, Clock } from "lucide-react";
+import { EditLessonModal } from "./EditLessonModal";
+import { Search, Filter, Calendar, Clock, Trash2 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 interface Lesson {
   id: string;
@@ -36,6 +43,7 @@ interface LessonsListProps {
   lessons: Lesson[];
   onEditLesson?: (lessonId: string) => void;
   onDeleteLesson?: (lessonId: string) => void;
+  onLessonsChanged?: () => void;
 }
 
 type SortOption = "date" | "time" | "student" | "course";
@@ -45,25 +53,40 @@ export function LessonsList({
   lessons,
   onEditLesson,
   onDeleteLesson,
+  onLessonsChanged,
 }: LessonsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
   const [filterBy, setFilterBy] = useState<FilterOption>("all");
 
+  // Edit modal state
+  const [editLesson, setEditLesson] = useState<Lesson | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  // Delete dialog state
+  const [deleteLesson, setDeleteLesson] = useState<Lesson | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  // Local lessons state for optimistic update
+  const [localLessons, setLocalLessons] = useState<Lesson[] | null>(null);
+
+  // Use local state if available (after edit/delete), else use prop
+  const displayLessons = localLessons || lessons;
+
   const filteredAndSortedLessons = useMemo(() => {
-    let filtered = lessons;
+    let filtered = displayLessons;
 
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(
         (lesson) =>
           lesson.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          lesson.student.firstName
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          lesson.student.lastName
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
+          (lesson.student &&
+            lesson.student.firstName
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase())) ||
+          (lesson.student &&
+            lesson.student.lastName
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase())) ||
           lesson.course.title
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
@@ -119,9 +142,11 @@ export function LessonsList({
         case "time":
           return a.startTime.localeCompare(b.startTime);
         case "student":
-          return `${a.student.firstName} ${a.student.lastName}`.localeCompare(
-            `${b.student.firstName} ${b.student.lastName}`
-          );
+          return (
+            a.student?.firstName +
+            " " +
+            a.student?.lastName
+          ).localeCompare(b.student?.firstName + " " + b.student?.lastName);
         case "course":
           return a.course.title.localeCompare(b.course.title);
         default:
@@ -130,7 +155,7 @@ export function LessonsList({
     });
 
     return filtered;
-  }, [lessons, searchTerm, sortBy, filterBy]);
+  }, [displayLessons, searchTerm, sortBy, filterBy]);
 
   const getStats = () => {
     const now = new Date();
@@ -164,6 +189,50 @@ export function LessonsList({
   };
 
   const stats = getStats();
+
+  // Edit handler
+  const handleEdit = (lessonId: string) => {
+    const lesson = displayLessons.find((l) => l.id === lessonId) || null;
+    setEditLesson(lesson);
+    setEditOpen(true);
+  };
+  // Save edit
+  const handleSaveEdit = async (updated: Partial<Lesson>) => {
+    if (!editLesson) return;
+    const res = await fetch(`/api/lessons?lessonId=${editLesson.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updated),
+    });
+    if (res.ok) {
+      const updatedLesson = await res.json();
+      setLocalLessons(
+        displayLessons.map((l) =>
+          l.id === editLesson.id ? { ...l, ...updatedLesson } : l
+        )
+      );
+      setEditOpen(false);
+      if (onLessonsChanged) onLessonsChanged();
+    }
+  };
+  // Delete handler
+  const handleDelete = (lessonId: string) => {
+    const lesson = displayLessons.find((l) => l.id === lessonId) || null;
+    setDeleteLesson(lesson);
+    setDeleteOpen(true);
+  };
+  // Confirm delete
+  const handleConfirmDelete = async () => {
+    if (!deleteLesson) return;
+    const res = await fetch(`/api/lessons?lessonId=${deleteLesson.id}`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      setLocalLessons(displayLessons.filter((l) => l.id !== deleteLesson.id));
+      setDeleteOpen(false);
+      if (onLessonsChanged) onLessonsChanged();
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -247,16 +316,46 @@ export function LessonsList({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAndSortedLessons.map((lesson) => (
-            <LessonCard
-              key={lesson.id}
-              lesson={lesson}
-              onEdit={onEditLesson}
-              onDelete={onDeleteLesson}
-            />
-          ))}
+          {filteredAndSortedLessons.map((lesson) =>
+            lesson.student ? (
+              <LessonCard
+                key={`${lesson.id}-${lesson.startTime}-${lesson.student.id}`}
+                lesson={lesson}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            ) : null
+          )}
         </div>
       )}
+
+      {/* Edit Modal */}
+      <EditLessonModal
+        open={editOpen}
+        lesson={editLesson}
+        onClose={() => setEditOpen(false)}
+        onSave={handleSaveEdit}
+      />
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Supprimer la leçon</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            Voulez-vous vraiment supprimer cette leçon ?
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Annuler
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmDelete}>
+              <Trash2 className="h-4 w-4 mr-1" /> Supprimer
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

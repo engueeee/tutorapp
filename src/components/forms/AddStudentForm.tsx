@@ -15,7 +15,7 @@ const studentSchema = z.object({
   firstName: z.string().min(1, "Champ requis"),
   lastName: z.string().min(1, "Champ requis"),
   age: z.coerce.number().min(3, "Âge invalide").max(120, "Âge invalide"),
-  contact: z.string().email("Email invalide"),
+  email: z.string().email("Email invalide"),
   grade: z.string().min(1, "Champ requis"),
 });
 
@@ -79,12 +79,12 @@ export function AddStudentForm({
 
       <div>
         <Input
-          placeholder="Email de contact"
+          placeholder="Email de l'étudiant"
           type="email"
-          {...register("contact")}
+          {...register("email")}
         />
-        {errors.contact && (
-          <p className="text-sm text-red-500">{errors.contact.message}</p>
+        {errors.email && (
+          <p className="text-sm text-red-500">{errors.email.message}</p>
         )}
       </div>
 
@@ -95,7 +95,12 @@ export function AddStudentForm({
         )}
       </div>
 
-      <Button type="submit" disabled={loading} className="w-full">
+      <Button
+        type="submit"
+        disabled={loading}
+        variant="primary"
+        className="w-full"
+      >
         {loading ? "Enregistrement..." : "Ajouter l'étudiant"}
       </Button>
     </form>

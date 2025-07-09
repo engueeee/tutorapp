@@ -113,14 +113,15 @@ export function EditStudentModal({
             type="number"
           />
           <Input
-            name="contact"
-            value={formData.contact}
+            name="email"
+            value={formData.email || ""}
             onChange={handleChange}
-            placeholder="Email de contact"
+            placeholder="Email de l'étudiant"
+            type="email"
           />
           <Input
             name="grade"
-            value={formData.grade}
+            value={formData.grade || ""}
             onChange={handleChange}
             placeholder="Niveau scolaire"
           />
@@ -129,6 +130,7 @@ export function EditStudentModal({
           <Button
             onClick={handleSubmit}
             disabled={loading}
+            variant="primary"
             className="w-full sm:w-auto"
           >
             {loading ? "Modification..." : "Enregistrer"}

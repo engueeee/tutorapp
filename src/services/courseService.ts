@@ -25,9 +25,8 @@ export interface CourseWithStudents {
     age: number;
     contact: string;
     grade: string;
+    courses: any[];
   }>;
-  studentCount: number;
-  status: string;
 }
 
 export class CourseService {
@@ -57,7 +56,7 @@ export class CourseService {
     // If we need students but didn't include lessons, fetch them separately
     if (includeStudents && !includeLessons) {
       return await Promise.all(
-        courses.map(async (course) => {
+        courses.map(async (course: any) => {
           const lessons = await prisma.lesson.findMany({
             where: { courseId: course.id },
             include: { student: true },
@@ -65,10 +64,10 @@ export class CourseService {
 
           // Remove duplicates based on student ID
           const uniqueStudents = lessons
-            .map((lesson) => lesson.student)
+            .map((lesson: any) => lesson.student)
             .filter(
-              (student, index, self) =>
-                index === self.findIndex((s) => s.id === student.id)
+              (student: any, index: number, self: any[]) =>
+                index === self.findIndex((s: any) => s.id === student.id)
             );
 
           return {
@@ -82,15 +81,12 @@ export class CourseService {
     }
 
     // Format courses with basic info
-    return courses.map((course) => ({
+    return courses.map((course: any) => ({
       ...course,
       students:
         includeLessons && includeStudents && course.lessons
           ? course.lessons.map((lesson: any) => lesson.student)
           : [],
-      studentCount:
-        includeLessons && course.lessons ? course.lessons.length : 0,
-      status: "Active",
     }));
   }
 

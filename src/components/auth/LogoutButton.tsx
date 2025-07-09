@@ -11,7 +11,7 @@ export function LogoutButton() {
 
   const handleLogout = () => {
     logout(); // nettoie le contexte + localStorage
-    router.push("/login"); // redirection vers la page de connexion
+    router.push("/"); // redirection vers la page d'accueil
   };
 
   return (

@@ -146,7 +146,7 @@ export function LessonCard({ lesson, onEdit, onDelete }: LessonCardProps) {
           <div className="flex items-center gap-2">
             {lesson.zoomLink && (
               <Button
-                variant="outline"
+                variant="primary"
                 size="sm"
                 className="flex items-center gap-1"
                 onClick={() => window.open(lesson.zoomLink, "_blank")}
@@ -161,10 +161,9 @@ export function LessonCard({ lesson, onEdit, onDelete }: LessonCardProps) {
           <div className="flex items-center gap-2">
             {onEdit && (
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 onClick={() => onEdit(lesson.id)}
-                className="text-blue-600 hover:text-blue-700"
               >
                 Modifier
               </Button>
