@@ -154,7 +154,12 @@ export async function GET(req: NextRequest) {
           ? {
               include: {
                 student: true,
-              },
+                lessonStudents: {
+                  include: {
+                    student: true,
+                  },
+                },
+              } as any,
             }
           : false,
         courseStudents: includeStudents
@@ -183,7 +188,7 @@ export async function GET(req: NextRequest) {
       };
 
       // Remove courseStudents from the main object to avoid confusion
-      delete transformedCourse.courseStudents;
+      delete (transformedCourse as any).courseStudents;
 
       return transformedCourse;
     });
@@ -241,17 +246,24 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    if (!courseWithStudents) {
+      return NextResponse.json(
+        { error: "Failed to fetch created course" },
+        { status: 500 }
+      );
+    }
+
     // Transform the data to match frontend expectations
     const transformedCourse = {
       ...courseWithStudents,
       // Transform courseStudents to students array
-      students: courseWithStudents?.courseStudents
+      students: courseWithStudents.courseStudents
         ? courseWithStudents.courseStudents.map((cs: any) => cs.student)
         : [],
     };
 
     // Remove courseStudents from the main object to avoid confusion
-    delete transformedCourse.courseStudents;
+    delete (transformedCourse as any).courseStudents;
 
     return NextResponse.json(transformedCourse, { status: 201 });
   } catch (err) {
@@ -289,10 +301,15 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Use transaction to delete course and all related lessons
+    // Use transaction to delete course and all related lessons and course-student links
     await prisma.$transaction(async (tx) => {
       // Delete lessons first (due to foreign key constraints)
       await tx.lesson.deleteMany({
+        where: { courseId },
+      });
+
+      // Delete course-student links
+      await tx.courseStudent.deleteMany({
         where: { courseId },
       });
 
@@ -308,22 +325,26 @@ export async function DELETE(req: NextRequest) {
     );
   } catch (err) {
     console.error("[API/COURSES][DELETE]", err);
+    // Return the error message for easier frontend debugging
     return NextResponse.json(
-      { error: "Failed to delete course" },
+      {
+        error: "Failed to delete course",
+        details: err instanceof Error ? err.message : String(err),
+      },
       { status: 500 }
     );
   }
 }
 
-// PATCH: link students to an existing course
+// PATCH: update course details or link students to an existing course
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { courseId, studentIds, tutorId } = body;
+    const { courseId, studentIds, tutorId, title, description } = body;
 
-    if (!courseId || !tutorId || !studentIds || !Array.isArray(studentIds)) {
+    if (!courseId || !tutorId) {
       return NextResponse.json(
-        { error: "courseId, tutorId, and studentIds array are required" },
+        { error: "courseId and tutorId are required" },
         { status: 400 }
       );
     }
@@ -340,56 +361,93 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // Verify all students exist and belong to the tutor
-    const students = await prisma.student.findMany({
-      where: {
-        id: { in: studentIds },
-        tutorId: tutorId,
-      },
-    });
+    // If updating course details
+    if (title !== undefined || description !== undefined) {
+      const updatedCourse = await prisma.course.update({
+        where: { id: courseId },
+        data: {
+          ...(title !== undefined && { title }),
+          ...(description !== undefined && { description }),
+        },
+        include: {
+          lessons: true,
+          courseStudents: { include: { student: true } },
+        },
+      });
 
-    if (students.length !== studentIds.length) {
-      return NextResponse.json(
-        { error: "Some students not found or don't belong to this tutor" },
-        { status: 400 }
-      );
+      // Transform the data to match frontend expectations
+      const transformedCourse = {
+        ...updatedCourse,
+        // Transform courseStudents to students array
+        students: updatedCourse.courseStudents
+          ? updatedCourse.courseStudents.map((cs: any) => cs.student)
+          : [],
+      };
+
+      // Remove courseStudents from the main object to avoid confusion
+      delete (transformedCourse as any).courseStudents;
+
+      return NextResponse.json(transformedCourse);
     }
 
-    // Create CourseStudent join records
-    await prisma.courseStudent.createMany({
-      data: studentIds.map((studentId: string) => ({
-        courseId: courseId,
-        studentId,
-      })),
-      skipDuplicates: true, // Skip if already linked
-    });
+    // If linking students to course
+    if (studentIds && Array.isArray(studentIds)) {
+      // Verify all students exist and belong to the tutor
+      const students = await prisma.student.findMany({
+        where: {
+          id: { in: studentIds },
+          tutorId: tutorId,
+        },
+      });
 
-    // Refetch course with updated students
-    const updatedCourse = await prisma.course.findUnique({
-      where: { id: courseId },
-      include: {
-        lessons: true,
-        courseStudents: { include: { student: true } },
-      },
-    });
+      if (students.length !== studentIds.length) {
+        return NextResponse.json(
+          { error: "Some students not found or don't belong to this tutor" },
+          { status: 400 }
+        );
+      }
 
-    // Transform the data to match frontend expectations
-    const transformedCourse = {
-      ...updatedCourse,
-      // Transform courseStudents to students array
-      students: updatedCourse?.courseStudents
-        ? updatedCourse.courseStudents.map((cs: any) => cs.student)
-        : [],
-    };
+      // Create CourseStudent join records
+      await prisma.courseStudent.createMany({
+        data: studentIds.map((studentId: string) => ({
+          courseId: courseId,
+          studentId,
+        })),
+        skipDuplicates: true, // Skip if already linked
+      });
 
-    // Remove courseStudents from the main object to avoid confusion
-    delete transformedCourse.courseStudents;
+      // Refetch course with updated students
+      const updatedCourse = await prisma.course.findUnique({
+        where: { id: courseId },
+        include: {
+          lessons: true,
+          courseStudents: { include: { student: true } },
+        },
+      });
 
-    return NextResponse.json(transformedCourse);
+      // Transform the data to match frontend expectations
+      const transformedCourse = {
+        ...updatedCourse,
+        // Transform courseStudents to students array
+        students: updatedCourse?.courseStudents
+          ? updatedCourse.courseStudents.map((cs: any) => cs.student)
+          : [],
+      };
+
+      // Remove courseStudents from the main object to avoid confusion
+      delete (transformedCourse as any).courseStudents;
+
+      return NextResponse.json(transformedCourse);
+    }
+
+    return NextResponse.json(
+      { error: "No valid update data provided" },
+      { status: 400 }
+    );
   } catch (err) {
     console.error("[API/COURSES][PATCH]", err);
     return NextResponse.json(
-      { error: "Failed to link students to course" },
+      { error: "Failed to update course" },
       { status: 500 }
     );
   }

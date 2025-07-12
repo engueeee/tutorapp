@@ -48,6 +48,11 @@ export default function LoginPage() {
 
   return (
     <div className="max-w-md mx-auto mt-20">
+      <img
+        src="/logo.png"
+        alt="TutorApp Logo"
+        className="mx-auto mb-6 max-w-[180px]"
+      />
       <h1 className="text-2xl font-bold mb-6">Connexion</h1>
       <LoginForm onLogin={handleLogin} loading={loading} error={error} />
     </div>

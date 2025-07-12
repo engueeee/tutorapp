@@ -3,9 +3,8 @@
 "use client";
 
 import { useState } from "react";
-import { AddStudentForm } from "@/components/forms/AddStudentForm";
 import { StudentList } from "@/components/student/StudentList";
-import { Card, CardContent } from "../ui/card";
+import { useAuth } from "@/context/AuthContext";
 
 interface StudentManagerProps {
   tutorId: string;
@@ -17,17 +16,16 @@ export function StudentManager({
   onStudentAdded,
 }: StudentManagerProps) {
   const [refreshFlag, setRefreshFlag] = useState(0);
+  const { user } = useAuth();
+  const loggedInStudentId =
+    user && user.role === "student" ? user.id : undefined;
 
   // Validate tutorId
   if (!tutorId || tutorId.trim() === "") {
     console.error("StudentManager: Invalid tutorId provided:", tutorId);
     return (
       <div className="space-y-8">
-        <Card>
-          <CardContent className="overflow-x-auto">
-            <div className="text-red-600">Erreur: ID du tuteur invalide.</div>
-          </CardContent>
-        </Card>
+        <div className="text-red-600">Erreur: ID du tuteur invalide.</div>
       </div>
     );
   }
@@ -41,15 +39,12 @@ export function StudentManager({
 
   return (
     <div className="space-y-8">
-      <Card>
-        <CardContent className="overflow-x-auto">
-          <AddStudentForm
-            tutorId={tutorId}
-            onStudentAdded={handleStudentAdded}
-          />
-        </CardContent>
-      </Card>
-      <StudentList tutorId={tutorId} refreshFlag={refreshFlag} />
+      <StudentList
+        tutorId={tutorId}
+        refreshFlag={refreshFlag}
+        onStudentAdded={handleStudentAdded}
+        loggedInStudentId={loggedInStudentId}
+      />
     </div>
   );
 }

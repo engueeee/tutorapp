@@ -7,7 +7,7 @@ import { DashboardLessonsSection } from "../lessons/DashboardLessonsSection";
 import { Course, Student } from "../types";
 
 export function TutorDashboardWithData() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshFlag, setRefreshFlag] = useState(0);
@@ -45,8 +45,24 @@ export function TutorDashboardWithData() {
     setRefreshFlag((prev) => prev + 1);
   }, []);
 
-  if (!user || !user.id) {
-    console.error("TutorDashboardWithData: User or user.id is null/undefined");
+  if (!user) {
+    if (token) {
+      // User is still loading
+      return (
+        <div className="p-6">
+          <div className="animate-pulse">
+            <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
+            <div className="space-y-4">
+              <div className="h-32 bg-gray-200 rounded"></div>
+              <div className="h-32 bg-gray-200 rounded"></div>
+              <div className="h-32 bg-gray-200 rounded"></div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    // No user and no token: show error
     return (
       <div className="p-6">
         <div className="text-red-600">
@@ -80,6 +96,7 @@ export function TutorDashboardWithData() {
         tutorId={user.id}
         courses={courses}
         onStudentAdded={handleStudentAdded}
+        onLessonsChanged={handleLessonsChanged}
       />
       <div className="p-6">
         <DashboardLessonsSection

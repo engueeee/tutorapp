@@ -2,26 +2,38 @@
 
 "use client";
 
-import { useAuth } from "@/context/AuthContext";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { TutorDashboardWithData } from "@/modules/dashboard/tutor/TutorDashboardWithData";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
 
-export default function TutorDashboard() {
-  const { user } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (user && user.role !== "tutor") {
-      if (user.role === "student") {
-        router.replace("/dashboard/student");
-      } else {
-        router.replace("/login");
-      }
-    }
-  }, [user, router]);
-
-  if (!user || user.role !== "tutor") return null;
-
-  return <TutorDashboardWithData />;
+export default function TutorDashboardPage() {
+  const pathname = usePathname();
+  return (
+    <div>
+      <nav className="mb-4 text-sm text-gray-500 flex gap-2">
+        <Link
+          href="/dashboard/tutor"
+          className={
+            pathname === "/dashboard/tutor"
+              ? "font-bold text-primary"
+              : "hover:text-primary"
+          }
+        >
+          Tableau de bord
+        </Link>
+        <span>/</span>
+        <Link
+          href="/dashboard/tutor/courses"
+          className={
+            pathname.startsWith("/dashboard/tutor/courses")
+              ? "font-bold text-primary"
+              : "hover:text-primary"
+          }
+        >
+          Cours
+        </Link>
+      </nav>
+      <TutorDashboardWithData />
+    </div>
+  );
 }

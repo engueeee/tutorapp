@@ -73,14 +73,14 @@ export default function HomePage() {
           </CardTitle>
           <div className="flex justify-center gap-2 mt-2">
             <Button
-              variant={showLogin ? "default" : "outline"}
+              variant={showLogin ? "primary" : "outline"}
               onClick={() => setShowLogin(true)}
               className="w-1/2"
             >
               Connexion
             </Button>
             <Button
-              variant={!showLogin ? "default" : "outline"}
+              variant={!showLogin ? "primary" : "outline"}
               onClick={() => setShowLogin(false)}
               className="w-1/2"
             >

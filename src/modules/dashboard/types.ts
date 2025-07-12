@@ -34,6 +34,9 @@ export interface Lesson {
   courseId: string;
   course: Course;
   student: Student;
+  lessonStudents?: {
+    student: Student;
+  }[];
 }
 
 export interface Homework {

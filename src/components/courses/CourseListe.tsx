@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, BookOpen, Users } from "lucide-react";
-import { AddStudentToCourseForm } from "./AddStudentToCourseForm";
+import { EditCourseStudentsModal } from "./AddStudentToCourseForm";
 
 interface Student {
   id: string;
@@ -278,7 +278,7 @@ export function CourseList({ tutorId }: CourseListProps) {
                         </div>
                       </DialogContent>
                     </Dialog>
-                    <AddStudentToCourseForm
+                    <EditCourseStudentsModal
                       course={course}
                       tutorId={tutorId}
                       onStudentAdded={refreshCourses}

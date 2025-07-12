@@ -8,6 +8,8 @@ import {
   Video,
   BookOpen,
   ExternalLink,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 
 interface Lesson {
@@ -25,6 +27,14 @@ interface Lesson {
     lastName: string;
     grade: string;
   };
+  lessonStudents?: {
+    student: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      grade: string;
+    };
+  }[];
   course: {
     id: string;
     title: string;
@@ -116,15 +126,31 @@ export function LessonCard({ lesson, onEdit, onDelete }: LessonCardProps) {
           )}
         </div>
 
-        {/* Student */}
-        <div className="flex items-center gap-2 text-sm text-gray-600">
-          <User className="h-4 w-4" />
-          <span className="font-medium">
-            {lesson.student.firstName} {lesson.student.lastName}
-          </span>
-          <Badge variant="outline" className="text-xs">
-            {lesson.student.grade}
-          </Badge>
+        {/* Students */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm text-gray-600">
+            <User className="h-4 w-4" />
+            <span className="font-medium">Élèves:</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {/* Show multiple students if available, otherwise show single student */}
+            {(lesson.lessonStudents && lesson.lessonStudents.length > 0
+              ? lesson.lessonStudents.map((ls) => ls.student)
+              : [lesson.student]
+            ).map((student, index) => (
+              <div key={student.id} className="flex items-center gap-1">
+                <span className="text-sm">
+                  {student.firstName} {student.lastName}
+                </span>
+                <Badge variant="outline" className="text-xs">
+                  {student.grade}
+                </Badge>
+                {index < (lesson.lessonStudents?.length || 1) - 1 && (
+                  <span className="text-gray-400">,</span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Date and Time */}
@@ -164,8 +190,10 @@ export function LessonCard({ lesson, onEdit, onDelete }: LessonCardProps) {
                 variant="secondary"
                 size="sm"
                 onClick={() => onEdit(lesson.id)}
+                className="p-2"
+                aria-label="Modifier"
               >
-                Modifier
+                <Pencil className="h-4 w-4" />
               </Button>
             )}
             {onDelete && (
@@ -173,9 +201,10 @@ export function LessonCard({ lesson, onEdit, onDelete }: LessonCardProps) {
                 variant="ghost"
                 size="sm"
                 onClick={() => onDelete(lesson.id)}
-                className="text-red-600 hover:text-red-700"
+                className="text-red-600 hover:text-red-700 p-2"
+                aria-label="Supprimer"
               >
-                Supprimer
+                <Trash2 className="h-4 w-4" />
               </Button>
             )}
           </div>

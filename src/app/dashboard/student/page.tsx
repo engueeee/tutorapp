@@ -4,9 +4,11 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { StudentDashboardModule } from "@/modules/dashboard/student/StudentDashboardModule";
+import { StudentOnboarding } from "@/components/onboarding/StudentOnboarding";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { RoleGuard } from "@/components/auth/RoleGuard";
 
 export default function StudentDashboard() {
   const { user, logout } = useAuth();
@@ -14,16 +16,11 @@ export default function StudentDashboard() {
   const [studentId, setStudentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (user && user.role !== "student") {
-      if (user.role === "tutor") {
-        router.replace("/dashboard/tutor");
-      } else {
-        router.replace("/login");
-      }
-    }
-  }, [user, router]);
+  const [showLanding, setShowLanding] = useState(true);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+  const [studentData, setStudentData] = useState<any>(null);
+  const userName =
+    user?.firstName || user?.email?.split("@")?.[0] || "Étudiant";
 
   useEffect(() => {
     const fetchStudentId = async () => {
@@ -38,7 +35,10 @@ export default function StudentDashboard() {
         if (response.ok) {
           const students = await response.json();
           if (students.length > 0) {
-            setStudentId(students[0].id);
+            const student = students[0];
+            setStudentId(student.id);
+            setOnboardingCompleted(student.onboardingCompleted || false);
+            setStudentData(student);
             return;
           }
         }
@@ -51,7 +51,10 @@ export default function StudentDashboard() {
         if (response.ok) {
           const students = await response.json();
           if (students.length > 0) {
-            setStudentId(students[0].id);
+            const student = students[0];
+            setStudentId(student.id);
+            setOnboardingCompleted(student.onboardingCompleted || false);
+            setStudentData(student);
             return;
           }
         }
@@ -73,6 +76,8 @@ export default function StudentDashboard() {
         if (response.ok) {
           const result = await response.json();
           setStudentId(result.student.id);
+          setOnboardingCompleted(false); // New students need onboarding
+          setStudentData(result.student);
           return;
         } else {
           const errorData = await response.json().catch(() => ({}));
@@ -130,17 +135,88 @@ export default function StudentDashboard() {
     );
   }
 
+  // Show onboarding for new students who haven't completed it
+  if (!onboardingCompleted) {
+    return (
+      <RoleGuard allowedRoles={["student"]}>
+        <StudentOnboarding
+          studentId={studentId}
+          userName={userName}
+          onComplete={() => {
+            setOnboardingCompleted(true);
+            setShowLanding(false);
+          }}
+        />
+      </RoleGuard>
+    );
+  }
+
+  // Show landing page for returning students
+  if (showLanding) {
+    return (
+      <RoleGuard allowedRoles={["student"]}>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
+          <div className="w-full max-w-2xl bg-white rounded-xl shadow-lg p-8 flex flex-col items-center gap-6">
+            <img
+              src="/logo.png"
+              alt="TutorApp Logo"
+              className="w-24 h-24 mb-2"
+            />
+            <h1 className="text-3xl font-bold text-primary mb-2 text-center">
+              Bienvenue, {userName} !
+            </h1>
+            <p className="text-gray-600 text-center max-w-md mb-4">
+              Accédez rapidement à vos cours, consultez votre calendrier,
+              retrouvez les informations de votre tuteur et gérez vos devoirs
+              depuis votre espace personnel.
+            </p>
+            <div className="flex flex-col md:flex-row gap-4 w-full justify-center">
+              <Button
+                className="w-full md:w-auto"
+                onClick={() => setShowLanding(false)}
+              >
+                Accéder au tableau de bord
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full md:w-auto"
+                onClick={() => router.push("/dashboard/student/calendar")}
+              >
+                Mon calendrier
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full md:w-auto"
+                onClick={() => router.push("/dashboard/student")}
+              >
+                Mes cours
+              </Button>
+            </div>
+            <div className="mt-6 flex flex-col items-center gap-2">
+              <span className="text-sm text-gray-500">
+                Besoin d'aide ? Contactez votre tuteur depuis la section dédiée.
+              </span>
+              <Button variant="destructive" size="sm" onClick={logout}>
+                Se déconnecter
+              </Button>
+            </div>
+          </div>
+        </div>
+      </RoleGuard>
+    );
+  }
+
   const lessons: any[] = [];
   const homework: any[] = [];
 
-  const userName = user?.email?.split("@")?.[0] || "Student";
-
   return (
-    <StudentDashboardModule
-      userName={userName}
-      studentId={studentId}
-      lessons={lessons}
-      homework={homework}
-    />
+    <RoleGuard allowedRoles={["student"]}>
+      <StudentDashboardModule
+        userName={userName}
+        studentId={studentId}
+        lessons={lessons}
+        homework={homework}
+      />
+    </RoleGuard>
   );
 }

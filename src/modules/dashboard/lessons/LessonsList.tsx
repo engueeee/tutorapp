@@ -33,6 +33,14 @@ interface Lesson {
     lastName: string;
     grade: string;
   };
+  lessonStudents?: {
+    student: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      grade: string;
+    };
+  }[];
   course: {
     id: string;
     title: string;
@@ -41,6 +49,7 @@ interface Lesson {
 
 interface LessonsListProps {
   lessons: Lesson[];
+  tutorId: string;
   onEditLesson?: (lessonId: string) => void;
   onDeleteLesson?: (lessonId: string) => void;
   onLessonsChanged?: () => void;
@@ -51,6 +60,7 @@ type FilterOption = "all" | "today" | "upcoming" | "past";
 
 export function LessonsList({
   lessons,
+  tutorId,
   onEditLesson,
   onDeleteLesson,
   onLessonsChanged,
@@ -76,22 +86,44 @@ export function LessonsList({
 
     // Filter by search term
     if (searchTerm) {
-      filtered = filtered.filter(
-        (lesson) =>
-          lesson.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (lesson.student &&
-            lesson.student.firstName
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase())) ||
-          (lesson.student &&
-            lesson.student.lastName
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase())) ||
-          lesson.course.title
+      filtered = filtered.filter((lesson) => {
+        const titleMatch = lesson.title
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+        const subjectMatch = lesson.subject
+          ?.toLowerCase()
+          .includes(searchTerm.toLowerCase());
+        const courseMatch = lesson.course.title
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase());
+
+        // Check single student
+        const singleStudentMatch =
+          lesson.student &&
+          (lesson.student.firstName
             .toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          lesson.subject?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+            lesson.student.lastName
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase()));
+
+        // Check multiple students
+        const multipleStudentsMatch = lesson.lessonStudents?.some(
+          (ls) =>
+            ls.student.firstName
+              .toLowerCase()
+              .includes(searchTerm.toLowerCase()) ||
+            ls.student.lastName.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+
+        return (
+          titleMatch ||
+          subjectMatch ||
+          courseMatch ||
+          singleStudentMatch ||
+          multipleStudentsMatch
+        );
+      });
     }
 
     // Filter by date
@@ -142,11 +174,15 @@ export function LessonsList({
         case "time":
           return a.startTime.localeCompare(b.startTime);
         case "student":
-          return (
-            a.student?.firstName +
-            " " +
-            a.student?.lastName
-          ).localeCompare(b.student?.firstName + " " + b.student?.lastName);
+          // Get the first student name for sorting (either from lessonStudents or single student)
+          const getStudentName = (lesson: Lesson) => {
+            if (lesson.lessonStudents && lesson.lessonStudents.length > 0) {
+              const firstStudent = lesson.lessonStudents[0].student;
+              return `${firstStudent.firstName} ${firstStudent.lastName}`;
+            }
+            return `${lesson.student.firstName} ${lesson.student.lastName}`;
+          };
+          return getStudentName(a).localeCompare(getStudentName(b));
         case "course":
           return a.course.title.localeCompare(b.course.title);
         default:
@@ -333,6 +369,8 @@ export function LessonsList({
       <EditLessonModal
         open={editOpen}
         lesson={editLesson}
+        tutorId={tutorId}
+        courseId={editLesson?.course?.id || ""}
         onClose={() => setEditOpen(false)}
         onSave={handleSaveEdit}
       />

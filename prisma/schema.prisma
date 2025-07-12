@@ -44,6 +44,9 @@ model Student {
   contact   String?
   grade     String?
   email     String?  @unique // Email for linking with user accounts
+  phoneNumber String? // Phone number for contact
+  profilePhoto String? // URL to profile photo
+  onboardingCompleted Boolean @default(false) // Track if onboarding is completed
   createdAt DateTime @default(now())
 
   tutor     User?    @relation("TutorStudents", fields: [tutorId], references: [id]) // Optional - for tutor-created students
@@ -54,6 +57,7 @@ model Student {
   
   lessons   Lesson[]
   courseStudents CourseStudent[]
+  lessonStudents LessonStudent[]
 }
 
 model Lesson {
@@ -78,6 +82,18 @@ model Lesson {
   student     Student  @relation(fields: [studentId], references: [id])
   studentId   String
   
+  // New relationship for multiple students
+  lessonStudents LessonStudent[]
+}
+
+model LessonStudent {
+  lessonId String
+  studentId String
+
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([lessonId, studentId])
 }
 
 model CourseStudent {

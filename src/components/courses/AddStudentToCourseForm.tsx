@@ -11,14 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Users, Plus, Check, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,87 +28,65 @@ interface Course {
   students: Student[];
 }
 
-interface AddStudentToCourseFormProps {
+interface EditCourseStudentsModalProps {
   course: Course;
   tutorId: string;
-  onStudentAdded?: () => void;
+  onStudentsChanged?: () => void;
 }
 
-export function AddStudentToCourseForm({
+export function EditCourseStudentsModal({
   course,
   tutorId,
-  onStudentAdded,
-}: AddStudentToCourseFormProps) {
+  onStudentsChanged,
+}: EditCourseStudentsModalProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [availableStudents, setAvailableStudents] = useState<Student[]>([]);
-  const [selectedStudentId, setSelectedStudentId] = useState<string>("");
+  const [allStudents, setAllStudents] = useState<Student[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>(
+    course.students.map((s) => s.id)
+  );
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Get current course students IDs for filtering
-  const currentStudentIds = course.students.map((student) => student.id);
-
   useEffect(() => {
     if (isOpen) {
-      fetchAvailableStudents();
+      fetch(`/api/students?tutorId=${tutorId}`)
+        .then((res) => res.json())
+        .then(setAllStudents);
+      setSelectedIds(course.students.map((s) => s.id));
     }
-  }, [isOpen, tutorId]);
+  }, [isOpen, tutorId, course.id]);
 
-  const fetchAvailableStudents = async () => {
-    try {
-      const response = await fetch(`/api/students?tutorId=${tutorId}`);
-      if (response.ok) {
-        const allStudents = await response.json();
-        // Filter out students already in the course
-        const available = allStudents.filter(
-          (student: Student) => !currentStudentIds.includes(student.id)
-        );
-        setAvailableStudents(available);
-      }
-    } catch (error) {
-      console.error("Error fetching students:", error);
-      alert("Erreur lors du chargement des élèves");
-    }
+  const handleToggle = (id: string) => {
+    setSelectedIds((ids) =>
+      ids.includes(id) ? ids.filter((sid) => sid !== id) : [...ids, id]
+    );
   };
 
-  const handleAddStudent = async () => {
-    if (!selectedStudentId) {
-      alert("Veuillez sélectionner un élève");
-      return;
-    }
-
+  const handleSave = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/courses", {
+      const res = await fetch("/api/courses", {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           courseId: course.id,
-          tutorId: tutorId,
-          studentIds: [selectedStudentId],
+          tutorId,
+          studentIds: selectedIds,
         }),
       });
-
-      if (response.ok) {
-        setSelectedStudentId("");
-        setIsOpen(false);
-        onStudentAdded?.();
-      } else {
-        const error = await response.json();
-        alert(error.error || "Erreur lors de l'ajout de l'élève");
-      }
-    } catch (error) {
-      console.error("Error adding student to course:", error);
-      alert("Erreur lors de l'ajout de l'élève");
+      if (!res.ok) throw new Error("Erreur lors de la mise à jour");
+      setIsOpen(false);
+      onStudentsChanged?.();
+      toast.success("Étudiants mis à jour");
+    } catch (e) {
+      toast.error("Erreur lors de la mise à jour");
     } finally {
       setLoading(false);
     }
   };
 
-  const filteredStudents = availableStudents.filter((student) =>
-    `${student.firstName} ${student.lastName} ${student.email || ""}`
+  const filtered = allStudents.filter((s) =>
+    `${s.firstName} ${s.lastName} ${s.email || ""}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
   );
@@ -124,19 +94,17 @@ export function AddStudentToCourseForm({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" className="ml-1">
           <Plus className="h-4 w-4" />
-          Ajouter un élève
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md w-full mx-auto p-2 sm:p-4">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Users className="h-5 w-5" />
-            Ajouter un élève au cours
+            Gérer les élèves du cours
           </DialogTitle>
         </DialogHeader>
-
         <div className="space-y-4">
           <div>
             <Label htmlFor="course-title">Cours</Label>
@@ -144,10 +112,9 @@ export function AddStudentToCourseForm({
               id="course-title"
               value={course.title}
               disabled
-              className="mt-1"
+              className="mt-1 w-full"
             />
           </div>
-
           <div>
             <Label htmlFor="search">Rechercher un élève</Label>
             <Input
@@ -155,24 +122,23 @@ export function AddStudentToCourseForm({
               placeholder="Nom, prénom ou email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="mt-1"
+              className="mt-1 w-full"
             />
           </div>
-
           <div>
-            <Label>Élèves disponibles</Label>
+            <Label>Élèves</Label>
             <div className="mt-2 max-h-48 overflow-y-auto border rounded-md">
-              {filteredStudents.length > 0 ? (
+              {filtered.length > 0 ? (
                 <div className="space-y-1 p-2">
-                  {filteredStudents.map((student) => (
+                  {filtered.map((student) => (
                     <div
                       key={student.id}
                       className={`flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-gray-50 ${
-                        selectedStudentId === student.id
+                        selectedIds.includes(student.id)
                           ? "bg-blue-50 border-blue-200"
                           : ""
                       }`}
-                      onClick={() => setSelectedStudentId(student.id)}
+                      onClick={() => handleToggle(student.id)}
                     >
                       <div className="flex-1">
                         <div className="font-medium">
@@ -184,13 +150,15 @@ export function AddStudentToCourseForm({
                           </div>
                         )}
                         {student.grade && (
-                          <Badge variant="secondary" className="text-xs">
+                          <span className="text-xs text-gray-500">
                             {student.grade}
-                          </Badge>
+                          </span>
                         )}
                       </div>
-                      {selectedStudentId === student.id && (
+                      {selectedIds.includes(student.id) ? (
                         <Check className="h-4 w-4 text-blue-600" />
+                      ) : (
+                        <X className="h-4 w-4 text-gray-400" />
                       )}
                     </div>
                   ))}
@@ -202,28 +170,22 @@ export function AddStudentToCourseForm({
               )}
             </div>
           </div>
-
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex flex-col sm:flex-row justify-end gap-2 w-full">
             <Button
               variant="outline"
               onClick={() => setIsOpen(false)}
               disabled={loading}
+              className="w-full sm:w-auto min-h-[44px]"
             >
               Annuler
             </Button>
             <Button
-              onClick={handleAddStudent}
-              disabled={!selectedStudentId || loading}
-              className="flex items-center gap-2"
+              variant="primary"
+              onClick={handleSave}
+              disabled={loading}
+              className="w-full sm:w-auto min-h-[44px]"
             >
-              {loading ? (
-                "Ajout en cours..."
-              ) : (
-                <>
-                  <Plus className="h-4 w-4" />
-                  Ajouter
-                </>
-              )}
+              Enregistrer
             </Button>
           </div>
         </div>

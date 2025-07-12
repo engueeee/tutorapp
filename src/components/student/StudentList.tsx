@@ -8,6 +8,7 @@ import { Course } from "@/modules/dashboard/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EditStudentModal } from "./EditStudentModal";
+import { AddStudentForm } from "@/components/forms/AddStudentForm";
 import {
   Trash2,
   BookOpen,
@@ -15,6 +16,7 @@ import {
   ChevronDown,
   ChevronUp,
   Users,
+  Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -26,13 +28,24 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export function StudentList({
   tutorId,
   refreshFlag,
+  onStudentAdded,
+  loggedInStudentId,
 }: {
   tutorId: string;
   refreshFlag: number;
+  onStudentAdded?: () => void;
+  loggedInStudentId?: string;
 }) {
   const [students, setStudents] = useState<DashboardStudent[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
@@ -44,6 +57,7 @@ export function StudentList({
   const [search, setSearch] = useState("");
   const [filterCourse, setFilterCourse] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   useEffect(() => {
     // Validate tutorId before making API calls
@@ -68,7 +82,9 @@ export function StudentList({
     }
     async function fetchCourses() {
       try {
-        const res = await fetch(`/api/courses?tutorId=${tutorId}`);
+        const res = await fetch(
+          `/api/courses?tutorId=${tutorId}&includeLessons=true&includeStudents=true`
+        );
 
         if (!res.ok) {
           let errorData = {};
@@ -164,36 +180,63 @@ export function StudentList({
 
   return (
     <div className="space-y-6">
-      {/* Search and Filters */}
-      <div className="flex flex-col md:flex-row gap-2 md:items-center mb-2">
-        <Input
-          placeholder="Rechercher un élève..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="md:w-64"
-        />
-        <Select value={filterCourse} onValueChange={setFilterCourse}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filtrer par cours" />
-          </SelectTrigger>
-          <SelectContent>
-            {Array.isArray(courses) &&
-              courses.map((course) => (
-                <SelectItem key={course.id} value={course.id}>
-                  {course.title}
-                </SelectItem>
-              ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="Filtrer par statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="active">Actif</SelectItem>
-            <SelectItem value="inactive">Inactif</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Header with Add Button */}
+      <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
+        <div className="flex flex-col md:flex-row gap-2 md:items-center">
+          <Input
+            placeholder="Rechercher un élève..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="md:w-64"
+          />
+          <Select value={filterCourse} onValueChange={setFilterCourse}>
+            <SelectTrigger className="w-48">
+              <SelectValue placeholder="Filtrer par cours" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.isArray(courses) &&
+                courses.map((course) => (
+                  <SelectItem key={course.id} value={course.id}>
+                    {course.title}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Filtrer par statut" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="active">Actif</SelectItem>
+              <SelectItem value="inactive">Inactif</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+          <DialogTrigger asChild>
+            <Button variant="primary" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Ajouter un étudiant
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Ajouter un nouvel étudiant</DialogTitle>
+            </DialogHeader>
+            <AddStudentForm
+              tutorId={tutorId}
+              onStudentAdded={(student) => {
+                setStudents((prev) => [...prev, student]);
+                setIsAddModalOpen(false);
+                if (onStudentAdded) {
+                  onStudentAdded();
+                }
+              }}
+              suppressToast={false}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
       {/* Student Grid */}
       {filteredStudents.length === 0 ? (
@@ -201,7 +244,35 @@ export function StudentList({
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {filteredStudents.map((student) => {
-            const isActive = (student.courses?.length ?? 0) > 0;
+            const isActive = loggedInStudentId
+              ? student.id === loggedInStudentId
+              : (student.courses?.length ?? 0) > 0;
+            // Aggregate lessons for this student from all courses
+            let allLessons: any[] = [];
+            const lessonsByCourse: Record<string, number> = {};
+            let mostRecentLessonDate: string | null = null;
+            courses.forEach((course) => {
+              if (!Array.isArray(course.lessons)) return;
+              course.lessons.forEach((lesson) => {
+                const isDirect = lesson.student?.id === student.id;
+                const isInGroup =
+                  Array.isArray(lesson.lessonStudents) &&
+                  lesson.lessonStudents.some(
+                    (ls) => ls.student?.id === student.id
+                  );
+                if (isDirect || isInGroup) {
+                  allLessons.push({ ...lesson, courseId: course.id });
+                  lessonsByCourse[course.id] =
+                    (lessonsByCourse[course.id] || 0) + 1;
+                  if (
+                    !mostRecentLessonDate ||
+                    new Date(lesson.date) > new Date(mostRecentLessonDate)
+                  ) {
+                    mostRecentLessonDate = lesson.date;
+                  }
+                }
+              });
+            });
             return (
               <Card
                 key={student.id}
@@ -217,7 +288,7 @@ export function StudentList({
                       <span>{student.email || "-"}</span>
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-2">
+                  <div className="flex flex-col itens-start gap-2">
                     <Badge
                       variant={isActive ? "primary" : "outline"}
                       className={
@@ -250,25 +321,39 @@ export function StudentList({
                 </CardHeader>
                 <CardContent className="text-sm text-gray-700 space-y-1">
                   <div className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4" />
-                    <span className="font-medium">Cours :</span>
-                    {student.courses && student.courses.length > 0 ? (
-                      <span className="truncate">
-                        {student.courses.map((c) => c.title).join(", ")}
-                      </span>
+                    {courses && courses.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {courses
+                          .filter((c) =>
+                            c.students.some((s) => s.id === student.id)
+                          )
+                          .map((c) => (
+                            <span
+                              key={c.id}
+                              className="flex items-center gap-1 bg-gray-100 rounded px-2 py-0.5"
+                            >
+                              {c.title}
+                            </span>
+                          ))}
+                      </div>
                     ) : (
                       <span className="text-gray-400">Aucun</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    <span className="font-medium">Leçons :</span>
-                    <span>
-                      {Array.isArray((student as any).lessons)
-                        ? (student as any).lessons.length
-                        : 0}
-                    </span>
+                    <span className="font-medium">Total leçons :</span>
+                    <span>{allLessons.length}</span>
                   </div>
+                  {mostRecentLessonDate && (
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="h-4 w-4" />
+                      <span className="font-medium">Dernière leçon :</span>
+                      <span>
+                        {new Date(mostRecentLessonDate).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
                   {expandedId === student.id && (
                     <div className="mt-2 space-y-1 border-t pt-2">
                       <div>

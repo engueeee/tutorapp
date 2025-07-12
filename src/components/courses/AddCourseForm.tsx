@@ -71,34 +71,44 @@ export function AddCourseForm({ tutorId }: AddCourseFormProps) {
   };
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-6 max-w-md w-full mx-auto p-2 sm:p-4">
       <CardHeader>
         <CardTitle>Ajouter un cours</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input placeholder="Titre du cours" {...register("title")} />
+          <Input
+            placeholder="Titre du cours"
+            {...register("title")}
+            className="w-full"
+          />
           <Textarea
             placeholder="Description (optionnel)"
             {...register("description")}
+            className="w-full"
           />
-          <div className="grid grid-cols-2 gap-4">
-            <Input type="date" {...register("date")} />
-            <Input type="time" {...register("startTime")} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Input type="date" {...register("date")} className="w-full" />
+            <Input type="time" {...register("startTime")} className="w-full" />
           </div>
-          <Input placeholder="Durée (ex: 1h)" {...register("duration")} />
+          <Input
+            placeholder="Durée (ex: 1h)"
+            {...register("duration")}
+            className="w-full"
+          />
           <Input
             placeholder="Lien Zoom (optionnel)"
             {...register("zoomLink")}
+            className="w-full"
           />
           <Input
             placeholder="Sujet du cours (optionnel)"
             {...register("subject")}
+            className="w-full"
           />
-
           <div className="space-y-2">
             <label className="font-medium">Sélectionnez les élèves :</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {students.map((student) => (
                 <label key={student.id} className="flex items-center space-x-2">
                   <input
@@ -114,7 +124,11 @@ export function AddCourseForm({ tutorId }: AddCourseFormProps) {
             </div>
           </div>
           <div className="flex items-center">
-            <Button type="submit" disabled={loading} className="w-50">
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full min-h-[44px] text-base"
+            >
               {loading ? "Création en cours..." : "Créer le cours"}
             </Button>
           </div>

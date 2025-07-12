@@ -24,9 +24,11 @@ type StudentFormData = z.infer<typeof studentSchema>;
 export function AddStudentForm({
   tutorId,
   onStudentAdded,
+  suppressToast = false,
 }: {
   tutorId: string;
-  onStudentAdded?: () => void;
+  onStudentAdded?: (student: any) => void;
+  suppressToast?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -40,12 +42,14 @@ export function AddStudentForm({
   const onSubmit = async (data: StudentFormData) => {
     setLoading(true);
     try {
-      await createStudent({ ...data, tutorId });
+      const created = await createStudent({ ...data, tutorId });
       reset();
-      if (onStudentAdded) onStudentAdded();
-      toast.success("Ajout effectué avec succès", {
-        description: `${data?.firstName} ${data?.lastName} est votre nouvel élève !`,
-      });
+      if (onStudentAdded) onStudentAdded(created);
+      if (!suppressToast) {
+        toast.success("Ajout effectué avec succès", {
+          description: `${data?.firstName} ${data?.lastName} est votre nouvel élève !`,
+        });
+      }
     } catch (err) {
       console.error("Erreur lors de l'ajout de l'étudiant", err);
       alert("Une erreur est survenue.");

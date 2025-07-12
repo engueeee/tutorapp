@@ -13,6 +13,7 @@ const CreateLessonSchema = z.object({
   tutorId: z.string().min(1, "Tutor ID is required"),
   courseId: z.string().min(1, "Course ID is required"),
   studentId: z.string().min(1, "Student ID is required"),
+  studentIds: z.array(z.string()).optional(), // New field for multiple students
 });
 
 const UpdateLessonSchema = CreateLessonSchema.partial();
@@ -23,38 +24,67 @@ export async function GET(req: NextRequest) {
     const lessonId = searchParams.get("lessonId");
     const tutorId = searchParams.get("tutorId");
     const courseId = searchParams.get("courseId");
+    const studentId = searchParams.get("studentId");
+
     if (lessonId) {
       const lesson = await prisma.lesson.findUnique({
         where: { id: lessonId },
         include: {
           student: true,
+          lessonStudents: {
+            include: {
+              student: true,
+            },
+          },
           course: {
             include: {
               courseStudents: { include: { student: true } },
             },
           },
+          tutor: true,
         },
       });
       return NextResponse.json(lesson);
     }
-    if (!tutorId && !courseId) {
+
+    if (!tutorId && !courseId && !studentId) {
       return NextResponse.json(
-        { error: "tutorId or courseId is required" },
+        { error: "tutorId, courseId, or studentId is required" },
         { status: 400 }
       );
     }
+
     const where: any = {};
     if (tutorId) where.tutorId = tutorId;
     if (courseId) where.courseId = courseId;
+    if (studentId) {
+      where.OR = [
+        { studentId: studentId },
+        {
+          lessonStudents: {
+            some: {
+              studentId: studentId,
+            },
+          },
+        },
+      ];
+    }
+
     const lessons = await prisma.lesson.findMany({
       where,
       include: {
         student: true,
+        lessonStudents: {
+          include: {
+            student: true,
+          },
+        },
         course: {
           include: {
             courseStudents: { include: { student: true } },
           },
         },
+        tutor: true,
       },
       orderBy: [{ date: "asc" }, { startTime: "asc" }],
     });
@@ -92,7 +122,38 @@ export async function POST(req: NextRequest) {
       tutorId,
       courseId,
       studentId,
+      studentIds,
     } = validationResult.data;
+
+    // Use the first studentId for backward compatibility
+    const primaryStudentId =
+      studentIds && studentIds.length > 0 ? studentIds[0] : studentId;
+
+    // Ensure students are enrolled in the course
+    const studentsToEnroll =
+      studentIds && studentIds.length > 0 ? studentIds : [primaryStudentId];
+
+    // Enroll students in the course if they're not already enrolled
+    for (const studentId of studentsToEnroll) {
+      const existingEnrollment = await prisma.courseStudent.findUnique({
+        where: {
+          courseId_studentId: {
+            courseId,
+            studentId,
+          },
+        },
+      });
+
+      if (!existingEnrollment) {
+        await prisma.courseStudent.create({
+          data: {
+            courseId,
+            studentId,
+          },
+        });
+      }
+    }
+
     const lesson = await prisma.lesson.create({
       data: {
         title,
@@ -104,10 +165,24 @@ export async function POST(req: NextRequest) {
         subject,
         tutorId,
         courseId,
-        studentId,
+        studentId: primaryStudentId,
+        // Create lesson-student relationships for multiple students
+        ...(studentIds &&
+          studentIds.length > 0 && {
+            lessonStudents: {
+              create: studentIds.map((studentId) => ({
+                studentId,
+              })),
+            },
+          }),
       },
       include: {
         student: true,
+        lessonStudents: {
+          include: {
+            student: true,
+          },
+        },
         course: {
           include: {
             courseStudents: { include: { student: true } },
@@ -167,11 +242,71 @@ export async function PATCH(req: NextRequest) {
         { status: 400 }
       );
     }
+
+    const { studentIds, ...updateData } = validationResult.data;
+
+    // Handle multiple students update
+    if (studentIds && studentIds.length > 0) {
+      // Get the current lesson to find the courseId
+      const currentLesson = await prisma.lesson.findUnique({
+        where: { id: lessonId },
+        select: { courseId: true },
+      });
+
+      if (!currentLesson) {
+        return NextResponse.json(
+          { error: "Lesson not found" },
+          { status: 404 }
+        );
+      }
+
+      // Update the primary student (for backward compatibility)
+      updateData.studentId = studentIds[0];
+
+      // Ensure students are enrolled in the course
+      for (const studentId of studentIds) {
+        const existingEnrollment = await prisma.courseStudent.findUnique({
+          where: {
+            courseId_studentId: {
+              courseId: currentLesson.courseId,
+              studentId,
+            },
+          },
+        });
+
+        if (!existingEnrollment) {
+          await prisma.courseStudent.create({
+            data: {
+              courseId: currentLesson.courseId,
+              studentId,
+            },
+          });
+        }
+      }
+
+      // Update lesson-student relationships
+      await prisma.lessonStudent.deleteMany({
+        where: { lessonId },
+      });
+
+      await prisma.lessonStudent.createMany({
+        data: studentIds.map((studentId) => ({
+          lessonId,
+          studentId,
+        })),
+      });
+    }
+
     const updated = await prisma.lesson.update({
       where: { id: lessonId },
-      data: validationResult.data,
+      data: updateData,
       include: {
         student: true,
+        lessonStudents: {
+          include: {
+            student: true,
+          },
+        },
         course: {
           include: {
             courseStudents: { include: { student: true } },

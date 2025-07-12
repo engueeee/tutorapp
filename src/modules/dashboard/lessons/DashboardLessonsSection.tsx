@@ -18,6 +18,14 @@ interface Lesson {
     lastName: string;
     grade: string;
   };
+  lessonStudents?: {
+    student: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      grade: string;
+    };
+  }[];
   course: {
     id: string;
     title: string;
@@ -80,6 +88,10 @@ export function DashboardLessonsSection({
   }
 
   return (
-    <LessonsList lessons={lessons} onLessonsChanged={handleLessonsChanged} />
+    <LessonsList
+      lessons={lessons}
+      tutorId={tutorId}
+      onLessonsChanged={handleLessonsChanged}
+    />
   );
 }
