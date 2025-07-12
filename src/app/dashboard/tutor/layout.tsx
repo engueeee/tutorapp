@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import { RoleGuard } from "@/components/auth/RoleGuard";
+import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { Calendar } from "lucide-react";
 
 export default function TutorDashboardLayout({
@@ -72,11 +73,8 @@ export default function TutorDashboardLayout({
         {/* Main content */}
         <main className="flex-1 flex flex-col">
           {/* Header */}
-          <header className="bg-white border-b px-8 py-4 flex items-center justify-between">
-            <div className="font-semibold text-lg text-primary">
-              Espace Tuteur
-            </div>
-            <LogoutButton />
+          <header className="bg-white border-b px-8 py-4">
+            <DashboardHeader title="Espace Tuteur" showUserInfo={true} />
           </header>
           {/* Breadcrumbs placeholder */}
           <div className="px-8 py-2 bg-gray-100 border-b">

@@ -10,6 +10,8 @@ interface TutorInfo {
   firstName: string;
   lastName: string;
   email: string;
+  phoneNumber?: string;
+  profilePhoto?: string;
 }
 
 interface TutorInfoCardProps {
@@ -83,11 +85,18 @@ export function TutorInfoCard({ studentId }: TutorInfoCardProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-2 text-sm text-gray-600">
-              Chargement des informations du tuteur...
-            </p>
+          <div className="flex items-start space-x-4">
+            {/* Skeleton Avatar */}
+            <div className="flex-shrink-0">
+              <div className="w-16 h-16 bg-gray-200 rounded-full animate-pulse"></div>
+            </div>
+
+            {/* Skeleton Content */}
+            <div className="flex-1 space-y-2">
+              <div className="h-4 bg-gray-200 rounded animate-pulse w-1/3"></div>
+              <div className="h-3 bg-gray-200 rounded animate-pulse w-1/2"></div>
+              <div className="h-3 bg-gray-200 rounded animate-pulse w-2/3"></div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -123,7 +132,9 @@ export function TutorInfoCard({ studentId }: TutorInfoCardProps) {
         </CardHeader>
         <CardContent>
           <div className="text-center py-8">
-            <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <User className="h-8 w-8 text-white" />
+            </div>
             <h3 className="text-lg font-medium text-gray-900 mb-2">
               Aucun tuteur assigné
             </h3>
@@ -149,10 +160,22 @@ export function TutorInfoCard({ studentId }: TutorInfoCardProps) {
         <div className="flex items-start space-x-4">
           {/* Tutor Avatar */}
           <div className="flex-shrink-0">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg">
-              {tutor.firstName.charAt(0)}
-              {tutor.lastName.charAt(0)}
-            </div>
+            {tutor.profilePhoto ? (
+              <img
+                src={tutor.profilePhoto}
+                alt={`${tutor.firstName} ${tutor.lastName} profile`}
+                title={`Photo de ${tutor.firstName} ${tutor.lastName}`}
+                className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 hover:border-blue-300 transition-colors cursor-pointer"
+              />
+            ) : (
+              <div
+                className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg hover:from-blue-600 hover:to-purple-700 transition-colors"
+                title={`${tutor.firstName} ${tutor.lastName}`}
+              >
+                {tutor.firstName.charAt(0)}
+                {tutor.lastName.charAt(0)}
+              </div>
+            )}
           </div>
 
           {/* Tutor Information */}
@@ -174,6 +197,13 @@ export function TutorInfoCard({ studentId }: TutorInfoCardProps) {
                 <Mail className="h-4 w-4" />
                 <span>{tutor.email}</span>
               </div>
+
+              {tutor.phoneNumber && (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  <span>{tutor.phoneNumber}</span>
+                </div>
+              )}
 
               {/* You can add more tutor information here if available */}
               <div className="flex items-center gap-2">

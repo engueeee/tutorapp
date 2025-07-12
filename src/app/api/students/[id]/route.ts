@@ -17,6 +17,7 @@ export async function PATCH(
     phoneNumber,
     profilePhoto,
     onboardingCompleted,
+    hourlyRate,
   } = await req.json();
 
   console.log("PATCH student with data:", {
@@ -42,6 +43,7 @@ export async function PATCH(
         phoneNumber,
         profilePhoto,
         onboardingCompleted,
+        hourlyRate,
       },
     });
     console.log("Student updated successfully:", updated);

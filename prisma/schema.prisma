@@ -14,6 +14,9 @@ model User {
   firstName String   
   lastName  String   
   role      String   @default("tutor")
+  phoneNumber String? // Phone number for contact
+  profilePhoto String? // URL to profile photo
+  onboardingCompleted Boolean @default(false) // Track if onboarding is completed
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -47,6 +50,7 @@ model Student {
   phoneNumber String? // Phone number for contact
   profilePhoto String? // URL to profile photo
   onboardingCompleted Boolean @default(false) // Track if onboarding is completed
+  hourlyRate Decimal? @db.Decimal(10,2) // Hourly rate for this student (per tutor)
   createdAt DateTime @default(now())
 
   tutor     User?    @relation("TutorStudents", fields: [tutorId], references: [id]) // Optional - for tutor-created students

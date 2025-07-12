@@ -8,6 +8,7 @@ export interface Student {
   email: string;
   grade: string;
   courses: Course[];
+  hourlyRate?: number;
 }
 
 export interface Course {

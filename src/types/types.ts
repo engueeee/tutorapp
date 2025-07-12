@@ -7,6 +7,7 @@ export interface Student {
   age: number;
   email?: string;
   grade?: string;
+  hourlyRate?: number;
 }
 
 // Pour le formulaire (frontend)
@@ -26,6 +27,7 @@ export type StudentPayload = {
   email: string;
   grade: string;
   tutorId: string;
+  hourlyRate?: number;
 };
 
 export interface User {
@@ -34,6 +36,9 @@ export interface User {
   lastName?: string;
   email: string;
   role: "tutor" | "student";
+  phoneNumber?: string;
+  profilePhoto?: string;
+  onboardingCompleted?: boolean;
 }
 
 export type UserRegisterPayload = {

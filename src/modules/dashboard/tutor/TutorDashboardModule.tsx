@@ -1,6 +1,7 @@
 import { TutorDashboardHeader } from "./TutorDashboardHeader";
 import { CoursesSection } from "./CoursesSection";
 import { StudentManager } from "@/components/dashboard/StudentManager";
+import { RevenueOverview } from "./RevenueOverview";
 import { Course } from "../types";
 
 interface TutorDashboardModuleProps {
@@ -23,6 +24,7 @@ export function TutorDashboardModule({
   return (
     <main className="p-6 space-y-8">
       <TutorDashboardHeader firstName={firstName} lastName={lastName} />
+      <RevenueOverview />
       <CoursesSection
         courses={courses}
         tutorId={tutorId}

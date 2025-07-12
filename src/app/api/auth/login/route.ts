@@ -39,7 +39,16 @@ export async function POST(req: Request) {
     });
 
     // ✅ Renvoie les champs complets du User
-    const { id, email: userEmail, role, firstName, lastName } = user;
+    const {
+      id,
+      email: userEmail,
+      role,
+      firstName,
+      lastName,
+      phoneNumber,
+      profilePhoto,
+      onboardingCompleted,
+    } = user;
 
     return NextResponse.json({
       token,
@@ -49,6 +58,9 @@ export async function POST(req: Request) {
         role,
         firstName,
         lastName,
+        phoneNumber,
+        profilePhoto,
+        onboardingCompleted,
       },
     });
   } catch (err) {

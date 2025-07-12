@@ -125,6 +125,27 @@ export function EditStudentModal({
             onChange={handleChange}
             placeholder="Niveau scolaire"
           />
+          <Input
+            name="hourlyRate"
+            value={
+              formData.hourlyRate !== undefined && formData.hourlyRate !== null
+                ? formData.hourlyRate
+                : ""
+            }
+            onChange={(e) =>
+              setFormData({
+                ...formData,
+                hourlyRate:
+                  e.target.value === ""
+                    ? undefined
+                    : parseFloat(e.target.value),
+              })
+            }
+            placeholder="Tarif horaire (€)"
+            type="number"
+            min="0"
+            step="0.01"
+          />
         </div>
         <div className="flex flex-col sm:flex-row justify-between gap-2 pt-6">
           <Button

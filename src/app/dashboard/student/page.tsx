@@ -4,7 +4,7 @@
 
 import { useAuth } from "@/context/AuthContext";
 import { StudentDashboardModule } from "@/modules/dashboard/student/StudentDashboardModule";
-import { StudentOnboarding } from "@/components/onboarding/StudentOnboarding";
+import { UniversalOnboarding } from "@/components/onboarding/UniversalOnboarding";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -139,13 +139,15 @@ export default function StudentDashboard() {
   if (!onboardingCompleted) {
     return (
       <RoleGuard allowedRoles={["student"]}>
-        <StudentOnboarding
-          studentId={studentId}
+        <UniversalOnboarding
+          entityId={studentId}
           userName={userName}
+          role="student"
           onComplete={() => {
             setOnboardingCompleted(true);
             setShowLanding(false);
           }}
+          initialData={studentData}
         />
       </RoleGuard>
     );
