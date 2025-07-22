@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LessonsList } from "./LessonsList";
+import { GroupedLessonsList } from "./GroupedLessonsList";
 
 interface Lesson {
   id: string;
@@ -88,7 +88,7 @@ export function DashboardLessonsSection({
   }
 
   return (
-    <LessonsList
+    <GroupedLessonsList
       lessons={lessons}
       tutorId={tutorId}
       onLessonsChanged={handleLessonsChanged}

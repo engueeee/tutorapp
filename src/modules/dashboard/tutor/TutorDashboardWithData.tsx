@@ -98,12 +98,10 @@ export function TutorDashboardWithData() {
         onStudentAdded={handleStudentAdded}
         onLessonsChanged={handleLessonsChanged}
       />
-      <div className="p-6">
-        <DashboardLessonsSection
-          tutorId={user.id}
-          onLessonsChanged={handleLessonsChanged}
-        />
-      </div>
+      <DashboardLessonsSection
+        tutorId={user.id}
+        onLessonsChanged={handleLessonsChanged}
+      />
     </div>
   );
 }

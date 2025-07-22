@@ -112,8 +112,12 @@ export function UniversalOnboarding({
         if (role === "student") {
           return (
             onboardingData.phoneNumber.trim() !== "" ||
-            onboardingData.age?.trim() !== "" ||
-            onboardingData.grade?.trim() !== ""
+            (onboardingData.age
+              ? String(onboardingData.age).trim() !== ""
+              : false) ||
+            (onboardingData.grade
+              ? String(onboardingData.grade).trim() !== ""
+              : false)
           );
         } else {
           return onboardingData.phoneNumber.trim() !== "";

@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EditStudentModal } from "./EditStudentModal";
 import { AddStudentForm } from "@/components/forms/AddStudentForm";
+import { StudentAvatar } from "./StudentAvatar";
 import {
   Trash2,
   BookOpen,
@@ -278,46 +279,49 @@ export function StudentList({
                 key={student.id}
                 className="shadow-sm border border-gray-200 flex flex-col justify-between"
               >
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <div>
-                    <CardTitle className="text-lg font-semibold">
-                      {student.firstName} {student.lastName}
-                    </CardTitle>
-                    <div className="flex items-center gap-2 mt-1 text-gray-500 text-sm">
-                      <Mail className="h-4 w-4" />
-                      <span>{student.email || "-"}</span>
+                <CardHeader className="flex flex-row items-start justify-between pb-2">
+                  <div className="flex items-start gap-3">
+                    <StudentAvatar
+                      student={{
+                        id: student.id,
+                        firstName: student.firstName,
+                        lastName: student.lastName,
+                        profilePhoto: student.profilePhoto,
+                        lastActivity: student.lastActivity
+                          ? new Date(student.lastActivity)
+                          : null,
+                      }}
+                      size="lg"
+                      showStatus={true}
+                    />
+                    <div className="flex-1">
+                      <CardTitle className="text-lg font-semibold">
+                        {student.firstName} {student.lastName}
+                      </CardTitle>
+                      <div className="flex items-center gap-2 mt-1 text-gray-500 text-sm">
+                        <Mail className="h-4 w-4" />
+                        <span>{student.email || "-"}</span>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-col itens-start gap-2">
-                    <Badge
-                      variant={isActive ? "primary" : "outline"}
-                      className={
-                        isActive
-                          ? "bg-green-100 text-green-700"
-                          : "bg-gray-100 text-gray-700"
-                      }
-                    >
-                      {isActive ? "Actif" : "Inactif"}
-                    </Badge>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() =>
-                        setExpandedId(
-                          expandedId === student.id ? null : student.id
-                        )
-                      }
-                      aria-label={
-                        expandedId === student.id ? "Réduire" : "Voir plus"
-                      }
-                    >
-                      {expandedId === student.id ? (
-                        <ChevronUp />
-                      ) : (
-                        <ChevronDown />
-                      )}
-                    </Button>
-                  </div>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() =>
+                      setExpandedId(
+                        expandedId === student.id ? null : student.id
+                      )
+                    }
+                    aria-label={
+                      expandedId === student.id ? "Réduire" : "Voir plus"
+                    }
+                  >
+                    {expandedId === student.id ? (
+                      <ChevronUp />
+                    ) : (
+                      <ChevronDown />
+                    )}
+                  </Button>
                 </CardHeader>
                 <CardContent className="text-sm text-gray-700 space-y-1">
                   <div className="flex items-center gap-2">

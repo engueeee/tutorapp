@@ -7,6 +7,8 @@ export interface Student {
   age: number;
   email: string;
   grade: string;
+  profilePhoto?: string | null;
+  lastActivity?: string | null;
   courses: Course[];
   hourlyRate?: number;
 }

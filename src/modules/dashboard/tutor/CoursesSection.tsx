@@ -20,7 +20,7 @@ import {
   Trash2,
   MoreHorizontal,
 } from "lucide-react";
-import { AddLessonWithCourseForm } from "@/components/courses/AddLessonWithCourseForm";
+import { QuickLessonCreationModal } from "@/components/courses/QuickLessonCreationModal";
 import { EditCourseForm } from "@/components/courses/EditCourseForm";
 import { Course } from "../types";
 import {
@@ -45,9 +45,9 @@ export function CoursesSection({
 }: CoursesSectionProps) {
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
   const [isLessonViewOpen, setIsLessonViewOpen] = useState(false);
-  const [isAddLessonOpen, setIsAddLessonOpen] = useState(false);
-  const [selectedCourseForLesson, setSelectedCourseForLesson] =
-    useState<Course | null>(null);
+  const [quickCreateOpen, setQuickCreateOpen] = useState(false);
+  const [selectedCourseForQuickCreate, setSelectedCourseForQuickCreate] =
+    useState<string>("");
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [isEditCourseOpen, setIsEditCourseOpen] = useState(false);
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
@@ -429,9 +429,10 @@ export function CoursesSection({
                       {/* Actions Dropdown: Add, Edit, Delete */}
                       <Select
                         onValueChange={(value) => {
-                          if (value === "add")
-                            setSelectedCourseForLesson(course),
-                              setIsAddLessonOpen(true);
+                          if (value === "add") {
+                            setSelectedCourseForQuickCreate(course.id);
+                            setQuickCreateOpen(true);
+                          }
                           if (value === "edit") handleEditCourse(course);
                           if (value === "delete") handleDeleteCourse(course);
                         }}
@@ -439,9 +440,7 @@ export function CoursesSection({
                         <SelectTrigger
                           className="w-8 h-8 p-0 border-none bg-transparent hover:bg-accent"
                           aria-label="Actions"
-                        >
-                          <Plus className="h-5 w-5" />
-                        </SelectTrigger>
+                        ></SelectTrigger>
                         <SelectContent>
                           <SelectItem value="add">
                             <Plus className="h-4 w-4 mr-2" /> Ajouter une leçon
@@ -526,6 +525,15 @@ export function CoursesSection({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Quick Lesson Creation Modal */}
+      <QuickLessonCreationModal
+        tutorId={tutorId}
+        onLessonCreated={handleLessonCreated}
+        selectedCourseId={selectedCourseForQuickCreate}
+        open={quickCreateOpen}
+        onOpenChange={setQuickCreateOpen}
+      />
     </section>
   );
 }

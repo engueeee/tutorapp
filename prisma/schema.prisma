@@ -49,6 +49,7 @@ model Student {
   email     String?  @unique // Email for linking with user accounts
   phoneNumber String? // Phone number for contact
   profilePhoto String? // URL to profile photo
+  lastActivity DateTime? // Track when student was last active
   onboardingCompleted Boolean @default(false) // Track if onboarding is completed
   hourlyRate Decimal? @db.Decimal(10,2) // Hourly rate for this student (per tutor)
   createdAt DateTime @default(now())
