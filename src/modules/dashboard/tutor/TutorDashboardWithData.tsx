@@ -3,26 +3,33 @@
 import { useEffect, useState, useCallback } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { TutorDashboardModule } from "./TutorDashboardModule";
-import { DashboardLessonsSection } from "../lessons/DashboardLessonsSection";
 import { Course, Student } from "../types";
 
 export function TutorDashboardWithData() {
   const { user, token } = useAuth();
   const [courses, setCourses] = useState<Course[]>([]);
+  const [lessons, setLessons] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshFlag, setRefreshFlag] = useState(0);
 
-  const fetchCourses = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      const res = await fetch(
+      // Fetch courses
+      const coursesRes = await fetch(
         `/api/courses?tutorId=${user.id}&includeStudents=true&includeLessons=true`
       );
-      if (res.ok) {
-        const data = await res.json();
-        // Expect data to be Course[] with students: Student[] and lessons: Lesson[]
-        setCourses(data);
+      if (coursesRes.ok) {
+        const coursesData = await coursesRes.json();
+        setCourses(coursesData);
+      }
+
+      // Fetch lessons
+      const lessonsRes = await fetch(`/api/lessons?tutorId=${user.id}`);
+      if (lessonsRes.ok) {
+        const lessonsData = await lessonsRes.json();
+        setLessons(lessonsData);
       }
     } catch (error) {
       // Handle error silently or show toast
@@ -32,13 +39,13 @@ export function TutorDashboardWithData() {
   }, [user]);
 
   useEffect(() => {
-    fetchCourses();
-  }, [fetchCourses, refreshFlag]);
+    fetchData();
+  }, [fetchData, refreshFlag]);
 
   // Handler for when lessons are created/updated
   const handleLessonsChanged = useCallback(() => {
-    fetchCourses();
-  }, [fetchCourses]);
+    fetchData();
+  }, [fetchData]);
 
   // Handler for when students are added
   const handleStudentAdded = useCallback(() => {
@@ -95,11 +102,8 @@ export function TutorDashboardWithData() {
         lastName={user.lastName || ""}
         tutorId={user.id}
         courses={courses}
+        lessons={lessons}
         onStudentAdded={handleStudentAdded}
-        onLessonsChanged={handleLessonsChanged}
-      />
-      <DashboardLessonsSection
-        tutorId={user.id}
         onLessonsChanged={handleLessonsChanged}
       />
     </div>

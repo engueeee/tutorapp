@@ -2,6 +2,7 @@ import { TutorDashboardHeader } from "./TutorDashboardHeader";
 import { CoursesSection } from "./CoursesSection";
 import { StudentManager } from "@/components/dashboard/StudentManager";
 import { RevenueOverview } from "./RevenueOverview";
+import { GroupedLessonsList } from "../lessons/GroupedLessonsList";
 import { Course } from "../types";
 
 interface TutorDashboardModuleProps {
@@ -9,6 +10,7 @@ interface TutorDashboardModuleProps {
   lastName: string;
   tutorId: string;
   courses: Course[];
+  lessons?: any[];
   onStudentAdded?: () => void;
   onLessonsChanged?: () => void;
 }
@@ -18,6 +20,7 @@ export function TutorDashboardModule({
   lastName,
   tutorId,
   courses,
+  lessons = [],
   onStudentAdded,
   onLessonsChanged,
 }: TutorDashboardModuleProps) {
@@ -32,6 +35,11 @@ export function TutorDashboardModule({
         onLessonCreated={onLessonsChanged}
       />
       <StudentManager tutorId={tutorId} onStudentAdded={onStudentAdded} />
+      <GroupedLessonsList
+        lessons={lessons}
+        tutorId={tutorId}
+        onLessonsChanged={onLessonsChanged}
+      />
     </main>
   );
 }

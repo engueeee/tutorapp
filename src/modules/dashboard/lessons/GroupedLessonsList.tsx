@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { LessonCard } from "./LessonCard";
-import { EditLessonModal } from "./EditLessonModal";
 import { QuickLessonCreationModal } from "@/components/courses/QuickLessonCreationModal";
 import {
   Search,
@@ -96,9 +95,6 @@ export function GroupedLessonsList({
   const [selectedCourseForQuickCreate, setSelectedCourseForQuickCreate] =
     useState<string>("");
 
-  // Edit modal state
-  const [editLesson, setEditLesson] = useState<Lesson | null>(null);
-  const [editOpen, setEditOpen] = useState(false);
   // Delete dialog state
   const [deleteLesson, setDeleteLesson] = useState<Lesson | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -245,44 +241,6 @@ export function GroupedLessonsList({
     setQuickCreateOpen(false);
   };
 
-  const handleEdit = (lessonId: string) => {
-    const lesson = displayLessons.find((l) => l.id === lessonId);
-    if (lesson) {
-      setEditLesson(lesson);
-      setEditOpen(true);
-    }
-  };
-
-  const handleSaveEdit = (updated: any) => {
-    if (!editLesson) return;
-
-    // Optimistically update local state immediately
-    setLocalLessons(
-      (prev) =>
-        prev?.map((lesson) =>
-          lesson.id === editLesson.id ? { ...lesson, ...updated } : lesson
-        ) ||
-        lessons.map((lesson) =>
-          lesson.id === editLesson.id ? { ...lesson, ...updated } : lesson
-        )
-    );
-
-    setEditOpen(false);
-    setEditLesson(null);
-
-    // Make API call in background
-    import("@/lib/api").then(({ lessonsApi }) => {
-      lessonsApi.update(editLesson.id, updated).catch((error) => {
-        // Revert optimistic update on error
-        setLocalLessons(null);
-      });
-    });
-
-    if (onLessonsChanged) {
-      onLessonsChanged();
-    }
-  };
-
   const handleDelete = (lessonId: string) => {
     const lesson = displayLessons.find((l) => l.id === lessonId);
     if (lesson) {
@@ -425,7 +383,7 @@ export function GroupedLessonsList({
       </div>
 
       {/* Grouped Lessons */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
         {loading ? (
           <>
             {[1, 2, 3, 4].map((i) => (
@@ -596,14 +554,7 @@ export function GroupedLessonsList({
                                 <Video className="h-3 w-3" />
                               </Button>
                             )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => handleEdit(lesson.id)}
-                            >
-                              <Edit className="h-3 w-3" />
-                            </Button>
+
                             <Button
                               size="sm"
                               variant="ghost"
@@ -650,16 +601,6 @@ export function GroupedLessonsList({
           })
         )}
       </div>
-
-      {/* Edit Modal */}
-      <EditLessonModal
-        lesson={editLesson}
-        open={editOpen}
-        tutorId={tutorId}
-        courseId={editLesson?.course?.id || ""}
-        onClose={() => setEditOpen(false)}
-        onSave={handleSaveEdit}
-      />
 
       {/* Delete Dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
