@@ -2,7 +2,8 @@
 
 import { useEffect } from "react";
 import { useUpdateStudentActivity } from "@/hooks/useUpdateStudentActivity";
-import { StudentDashboardModule } from "./StudentDashboardModule";
+import { CoursesSection } from "./CoursesSection";
+import { TutorInfoCard } from "./TutorInfoCard";
 import { Lesson, Homework } from "../types";
 
 interface StudentDashboardWithActivityProps {
@@ -28,11 +29,9 @@ export function StudentDashboardWithActivity({
   }, [studentId, updateActivity]);
 
   return (
-    <StudentDashboardModule
-      userName={userName}
-      studentId={studentId}
-      lessons={lessons}
-      homework={homework}
-    />
+    <div className="space-y-8">
+      <CoursesSection studentId={studentId} />
+      <TutorInfoCard studentId={studentId} />
+    </div>
   );
 }
