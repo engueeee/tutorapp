@@ -4,9 +4,10 @@ import { NextResponse } from "next/server";
 // GET: fetch user data including onboarding fields
 export async function GET(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const userId = params.id;
+  const { id } = await params;
+  const userId = id;
 
   try {
     const user = await prisma.user.findUnique({
@@ -42,9 +43,10 @@ export async function GET(
 // PATCH: update a user (tutor) onboarding/profile fields
 export async function PATCH(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const userId = params.id;
+  const { id } = await params;
+  const userId = id;
   const {
     firstName,
     lastName,

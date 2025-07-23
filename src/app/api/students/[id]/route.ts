@@ -5,11 +5,11 @@ import { NextRequest } from "next/server";
 // 🔄 PATCH : mettre à jour un étudiant
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   try {
     const data = await req.json();
-    const { id } = params;
 
     const updated = await prisma.student.update({
       where: { id: String(id) },
@@ -40,9 +40,10 @@ export async function PATCH(
 // ❌ DELETE : supprimer un étudiant
 export async function DELETE(
   req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const studentId = params.id;
+  const { id } = await params;
+  const studentId = id;
 
   try {
     await prisma.student.delete({ where: { id: studentId } });
