@@ -109,8 +109,13 @@ export async function POST(req: NextRequest) {
       token,
     });
   } catch (err) {
+    console.error("[REGISTER_ERROR]", err);
     return NextResponse.json(
-      { error: "Failed to register user" },
+      {
+        error: "Failed to register user",
+        details:
+          process.env.NODE_ENV === "development" ? String(err) : undefined,
+      },
       { status: 500 }
     );
   }
