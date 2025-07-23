@@ -65,6 +65,6 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     console.error("[LOGIN]", err);
-    return new NextResponse("Erreur serveur", { status: 500 });
+    return NextResponse.json({ error: "Erreur serveur" }, { status: 500 });
   }
 }
