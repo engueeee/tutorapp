@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LessonCard } from "./LessonCard";
-import { EditLessonModal } from "./EditLessonModal";
 import { Search, Filter, Calendar, Clock, Trash2 } from "lucide-react";
 import {
   Dialog,
@@ -364,15 +363,7 @@ export function LessonsList({
         </div>
       )}
 
-      {/* Edit Modal */}
-      <EditLessonModal
-        open={editOpen}
-        lesson={editLesson as any}
-        tutorId={tutorId}
-        courseId={editLesson?.course?.id || ""}
-        onClose={() => setEditOpen(false)}
-        onSave={handleSaveEdit as any}
-      />
+      {/* Edit Modal - Removed as component doesn't exist */}
 
       {/* Delete Dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
