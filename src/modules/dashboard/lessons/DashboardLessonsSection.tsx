@@ -48,12 +48,15 @@ export function DashboardLessonsSection({
     setLoading(true);
     try {
       const res = await fetch(`/api/lessons?tutorId=${tutorId}`);
+
       if (res.ok) {
         const data = await res.json();
         setLessons(data);
+      } else {
+        const errorData = await res.json().catch(() => ({}));
       }
     } catch (error) {
-      console.error("Error fetching lessons:", error);
+      // Handle error silently or show a toast
     } finally {
       setLoading(false);
     }
@@ -91,6 +94,7 @@ export function DashboardLessonsSection({
     <GroupedLessonsList
       lessons={lessons}
       tutorId={tutorId}
+      loading={loading}
       onLessonsChanged={handleLessonsChanged}
     />
   );

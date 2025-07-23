@@ -17,6 +17,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+interface Student {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email?: string;
+  grade?: string;
+}
 
 interface Lesson {
   id: string;
@@ -27,19 +34,9 @@ interface Lesson {
   duration: string;
   zoomLink?: string;
   subject?: string;
-  student: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    grade: string;
-  };
+  student: Student;
   lessonStudents?: {
-    student: {
-      id: string;
-      firstName: string;
-      lastName: string;
-      grade: string;
-    };
+    student: Student;
   }[];
   course: {
     id: string;
@@ -233,23 +230,24 @@ export function LessonsList({
     setEditOpen(true);
   };
   // Save edit
-  const handleSaveEdit = async (updated: Partial<Lesson>) => {
+  const handleSaveEdit = (updated: any) => {
     if (!editLesson) return;
-    const res = await fetch(`/api/lessons?lessonId=${editLesson.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updated),
-    });
-    if (res.ok) {
-      const updatedLesson = await res.json();
-      setLocalLessons(
-        displayLessons.map((l) =>
-          l.id === editLesson.id ? { ...l, ...updatedLesson } : l
-        )
-      );
-      setEditOpen(false);
-      if (onLessonsChanged) onLessonsChanged();
-    }
+    import("@/lib/api")
+      .then(({ lessonsApi }) => {
+        return lessonsApi.update(editLesson.id, updated);
+      })
+      .then((updatedLesson) => {
+        setLocalLessons(
+          displayLessons.map((l) =>
+            l.id === editLesson.id ? { ...l, ...updatedLesson } : l
+          ) as any
+        );
+        setEditOpen(false);
+        if (onLessonsChanged) onLessonsChanged();
+      })
+      .catch((error) => {
+        // Handle error silently or show toast
+      });
   };
   // Delete handler
   const handleDelete = (lessonId: string) => {
@@ -260,13 +258,14 @@ export function LessonsList({
   // Confirm delete
   const handleConfirmDelete = async () => {
     if (!deleteLesson) return;
-    const res = await fetch(`/api/lessons?lessonId=${deleteLesson.id}`, {
-      method: "DELETE",
-    });
-    if (res.ok) {
+    try {
+      const { lessonsApi } = await import("@/lib/api");
+      await lessonsApi.delete(deleteLesson.id);
       setLocalLessons(displayLessons.filter((l) => l.id !== deleteLesson.id));
       setDeleteOpen(false);
       if (onLessonsChanged) onLessonsChanged();
+    } catch (error) {
+      // Handle error silently or show toast
     }
   };
 
@@ -356,7 +355,7 @@ export function LessonsList({
             lesson.student ? (
               <LessonCard
                 key={`${lesson.id}-${lesson.startTime}-${lesson.student.id}`}
-                lesson={lesson}
+                lesson={lesson as any}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
               />
@@ -368,11 +367,11 @@ export function LessonsList({
       {/* Edit Modal */}
       <EditLessonModal
         open={editOpen}
-        lesson={editLesson}
+        lesson={editLesson as any}
         tutorId={tutorId}
         courseId={editLesson?.course?.id || ""}
         onClose={() => setEditOpen(false)}
-        onSave={handleSaveEdit}
+        onSave={handleSaveEdit as any}
       />
 
       {/* Delete Dialog */}

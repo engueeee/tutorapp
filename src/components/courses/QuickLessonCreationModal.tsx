@@ -164,9 +164,10 @@ export function QuickLessonCreationModal({
         duration: lesson.duration,
         zoomLink: lesson.zoomLink,
         subject: lesson.subject,
+        tutorId: tutorId,
         courseId: currentSelectedCourseId,
-        studentId: selectedStudentIds[0], // Main student
-        additionalStudentIds: selectedStudentIds.slice(1), // Additional students
+        studentId: selectedStudentIds[0], // Primary student (required for backward compatibility)
+        studentIds: selectedStudentIds, // All selected students
       };
 
       const response = await fetch("/api/lessons", {

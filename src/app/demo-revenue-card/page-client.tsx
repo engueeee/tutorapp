@@ -21,6 +21,27 @@ const negativeGrowthData = [
   { date: "Jun", revenue: 1500 },
 ];
 
+// Weekly data for demonstration
+const weeklyData = [
+  { date: "Mon", revenue: 300 },
+  { date: "Tue", revenue: 450 },
+  { date: "Wed", revenue: 380 },
+  { date: "Thu", revenue: 520 },
+  { date: "Fri", revenue: 600 },
+  { date: "Sat", revenue: 480 },
+  { date: "Sun", revenue: 350 },
+];
+
+const weeklyNegativeData = [
+  { date: "Mon", revenue: 600 },
+  { date: "Tue", revenue: 520 },
+  { date: "Wed", revenue: 480 },
+  { date: "Thu", revenue: 420 },
+  { date: "Fri", revenue: 380 },
+  { date: "Sat", revenue: 320 },
+  { date: "Sun", revenue: 280 },
+];
+
 export default function DemoRevenueCardPageClient() {
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
@@ -33,7 +54,8 @@ export default function DemoRevenueCardPageClient() {
         <RevenueCard
           totalRevenue={15231.89}
           growthPercentage={20.1}
-          chartData={sampleChartData}
+          monthlyData={sampleChartData}
+          weeklyData={weeklyData}
           title="Total Revenue"
           currency="EUR"
         />
@@ -42,7 +64,8 @@ export default function DemoRevenueCardPageClient() {
         <RevenueCard
           totalRevenue={8750.5}
           growthPercentage={-12.5}
-          chartData={negativeGrowthData}
+          monthlyData={negativeGrowthData}
+          weeklyData={weeklyNegativeData}
           title="Monthly Revenue"
           currency="EUR"
         />
@@ -51,7 +74,8 @@ export default function DemoRevenueCardPageClient() {
         <RevenueCard
           totalRevenue={12345.67}
           growthPercentage={0}
-          chartData={sampleChartData}
+          monthlyData={sampleChartData}
+          weeklyData={weeklyData}
           title="Quarterly Revenue"
           currency="EUR"
         />
@@ -60,7 +84,8 @@ export default function DemoRevenueCardPageClient() {
         <RevenueCard
           totalRevenue={18999.99}
           growthPercentage={35.7}
-          chartData={sampleChartData}
+          monthlyData={sampleChartData}
+          weeklyData={weeklyData}
           title="USD Revenue"
           currency="USD"
         />
@@ -69,7 +94,8 @@ export default function DemoRevenueCardPageClient() {
         <RevenueCard
           totalRevenue={125000.0}
           growthPercentage={8.3}
-          chartData={sampleChartData}
+          monthlyData={sampleChartData}
+          weeklyData={weeklyData}
           title="Annual Revenue"
           currency="EUR"
         />
@@ -78,7 +104,8 @@ export default function DemoRevenueCardPageClient() {
         <RevenueCard
           totalRevenue={1250.75}
           growthPercentage={-5.2}
-          chartData={negativeGrowthData}
+          monthlyData={negativeGrowthData}
+          weeklyData={weeklyNegativeData}
           title="Weekly Revenue"
           currency="EUR"
         />
@@ -93,6 +120,7 @@ export default function DemoRevenueCardPageClient() {
             red for negative)
           </li>
           <li>• Smooth line chart showing revenue evolution</li>
+          <li>• Toggle between weekly and monthly views</li>
           <li>• Responsive design that works on all screen sizes</li>
           <li>• Customizable title and currency</li>
           <li>• Interactive tooltips on chart hover</li>

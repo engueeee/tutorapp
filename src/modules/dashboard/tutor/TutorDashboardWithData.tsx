@@ -25,7 +25,7 @@ export function TutorDashboardWithData() {
         setCourses(data);
       }
     } catch (error) {
-      console.error("Error fetching courses:", error);
+      // Handle error silently or show toast
     } finally {
       setLoading(false);
     }

@@ -29,19 +29,8 @@ export async function GET(req: NextRequest) {
     const includeStudents = searchParams.get("includeStudents") === "true";
     const includeLessons = searchParams.get("includeLessons") === "true";
 
-    console.log("Courses API: Request parameters:");
-    console.log("  - tutorId:", tutorId, "(type:", typeof tutorId, ")");
-    console.log("  - studentId:", studentId, "(type:", typeof studentId, ")");
-    console.log("  - courseId:", courseId, "(type:", typeof courseId, ")");
-    console.log("  - includeStudents:", includeStudents);
-    console.log("  - includeLessons:", includeLessons);
-
     // Validate tutorId if provided
-    if (
-      tutorId !== null &&
-      (tutorId.trim() === "" || tutorId === "null" || tutorId === "undefined")
-    ) {
-      console.error("Courses API: Invalid tutorId provided:", tutorId);
+    if (tutorId !== null && tutorId !== undefined && tutorId.trim() === "") {
       return NextResponse.json(
         {
           error: "Invalid tutorId provided",
@@ -49,9 +38,9 @@ export async function GET(req: NextRequest) {
             {
               code: "invalid_type",
               expected: "string",
-              received: "null",
+              received: typeof tutorId,
               path: ["tutorId"],
-              message: "Expected string, received null",
+              message: `Expected string, received ${typeof tutorId}: ${tutorId}`,
             },
           ],
         },
@@ -62,11 +51,11 @@ export async function GET(req: NextRequest) {
     // Validate studentId if provided
     if (
       studentId !== null &&
+      studentId !== undefined &&
       (studentId.trim() === "" ||
         studentId === "null" ||
         studentId === "undefined")
     ) {
-      console.error("Courses API: Invalid studentId provided:", studentId);
       return NextResponse.json(
         {
           error: "Invalid studentId provided",
@@ -84,96 +73,179 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const whereClause: any = {};
-
-    if (tutorId) {
-      whereClause.tutorId = tutorId;
-    }
-
-    if (courseId) {
-      whereClause.id = courseId;
-    }
-
-    if (studentId) {
-      console.log(
-        "Courses API: Looking for courses with studentId:",
-        studentId
-      );
-
-      // First, let's check if the student exists
-      const student = await prisma.student.findUnique({
-        where: { id: studentId },
-        include: { courseStudents: { include: { course: true } } },
-      });
-
-      console.log("Courses API: Student found:", student ? "Yes" : "No");
-      if (student) {
-        console.log(
-          "Courses API: Student courseStudents count:",
-          student.courseStudents.length
-        );
-        console.log(
-          "Courses API: Student courseStudents:",
-          student.courseStudents.map((cs) => ({
-            courseId: cs.courseId,
-            courseTitle: cs.course.title,
-          }))
-        );
-      }
-
-      whereClause.courseStudents = {
-        some: {
-          studentId: studentId,
-        },
-      };
-    }
-
-    // Ensure at least one filter is provided
-    if (!tutorId && !studentId) {
-      console.error("Courses API: No tutorId or studentId provided");
+    if (!tutorId && !courseId && !studentId) {
       return NextResponse.json(
-        { error: "Either tutorId or studentId is required" },
+        { error: "Either tutorId, courseId, or studentId is required" },
         { status: 400 }
       );
     }
 
-    console.log("Courses API: Final where clause:", whereClause);
+    let courses: any[] = [];
 
-    const courses = await prisma.course.findMany({
-      where: whereClause,
-      include: {
-        tutor: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+    if (tutorId) {
+      // Try a very basic query first
+      try {
+        courses = await prisma.course.findMany({
+          where: {
+            tutorId: String(tutorId).trim(),
           },
-        },
-        lessons: includeLessons
-          ? {
-              include: {
-                student: true,
-                lessonStudents: {
-                  include: {
-                    student: true,
+          include: {
+            tutor: true,
+          },
+          orderBy: { createdAt: "desc" },
+        });
+
+        // If includeLessons is true, fetch lessons separately
+        if (includeLessons && courses.length > 0) {
+          const courseIds = courses.map((c) => c.id);
+          const lessons = await prisma.lesson.findMany({
+            where: {
+              courseId: { in: courseIds },
+            },
+            include: {
+              student: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
+              lessonStudents: {
+                include: {
+                  student: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                    },
                   },
                 },
-              } as any,
-            }
-          : false,
-        courseStudents: includeStudents
-          ? { include: { student: true } }
-          : false,
-      },
-      orderBy: { createdAt: "desc" },
-    });
+              },
+            },
+          });
 
-    console.log("Courses API: Found courses count:", courses.length);
-    console.log(
-      "Courses API: First course (if any):",
-      courses[0] || "No courses found"
-    );
+          // Attach lessons to courses
+          courses = courses.map((course) => ({
+            ...course,
+            lessons: lessons.filter((lesson) => lesson.courseId === course.id),
+          }));
+        }
+
+        // If includeStudents is true, fetch students separately
+        if (includeStudents && courses.length > 0) {
+          const courseIds = courses.map((c) => c.id);
+          const courseStudents = await prisma.courseStudent.findMany({
+            where: {
+              courseId: { in: courseIds },
+            },
+            include: {
+              student: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  age: true,
+                  contact: true,
+                  grade: true,
+                  phoneNumber: true,
+                  profilePhoto: true,
+                  lastActivity: true,
+                  onboardingCompleted: true,
+                  hourlyRate: true,
+                  createdAt: true,
+                  tutorId: true,
+                  userId: true,
+                },
+              },
+            },
+          });
+
+          // Attach students to courses
+          courses = courses.map((course) => ({
+            ...course,
+            courseStudents: courseStudents.filter(
+              (cs) => cs.courseId === course.id
+            ),
+          }));
+        }
+      } catch (error) {
+        courses = [];
+      }
+    } else if (courseId) {
+      const course = await prisma.course.findUnique({
+        where: {
+          id: courseId,
+        },
+        include: {
+          tutor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
+          lessons: includeLessons
+            ? {
+                include: {
+                  student: true,
+                  lessonStudents: {
+                    include: {
+                      student: true,
+                    },
+                  },
+                },
+              }
+            : false,
+          courseStudents: includeStudents
+            ? { include: { student: true } }
+            : false,
+        },
+      });
+      courses = course ? [course] : [];
+    } else if (studentId) {
+      // For studentId, we need to get courses through courseStudents
+      const student = await prisma.student.findUnique({
+        where: { id: studentId },
+        include: {
+          courseStudents: {
+            include: {
+              course: {
+                include: {
+                  tutor: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                    },
+                  },
+                  lessons: includeLessons
+                    ? {
+                        include: {
+                          student: true,
+                          lessonStudents: {
+                            include: {
+                              student: true,
+                            },
+                          },
+                        },
+                      }
+                    : false,
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (student) {
+        courses = student.courseStudents.map((cs) => cs.course);
+      }
+    }
 
     // Transform the data to match frontend expectations
     const transformedCourses = courses.map((course: any) => {
@@ -197,7 +269,11 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("[API/COURSES][GET]", err);
     return NextResponse.json(
-      { error: "Failed to load courses" },
+      {
+        error: "Failed to load courses",
+        details: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      },
       { status: 500 }
     );
   }

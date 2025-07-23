@@ -259,14 +259,19 @@ export default function RevenueDashboardPageClient() {
       .then((d) => {
         // Transform yearly data into monthly histogram
         const monthlyData = Object.entries(d.revenueByPeriod || {})
-          .map(([date, value]) => ({
-            month: formatMonth(date),
+          .map(([monthKey, value]) => ({
+            month: formatMonth(monthKey + "-01"), // Add day to make it a valid date
             revenue: value,
-            fullDate: date,
+            fullDate: monthKey,
           }))
           .sort(
             (a, b) =>
               new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime()
+          )
+          // Remove duplicates by month (in case API returns multiple entries for same month)
+          .filter(
+            (item, index, self) =>
+              index === self.findIndex((t) => t.fullDate === item.fullDate)
           );
         setYearlyData(monthlyData);
       })
@@ -407,7 +412,9 @@ export default function RevenueDashboardPageClient() {
             {/* Large Total Revenue Card */}
             <Card className="p-8 bg-gradient-to-r from-[#050f8b] to-[#0a1f9b] text-white flex items-center justify-center">
               <div className="text-center">
-                <div className="text-sm opacity-90 mb-2">Revenu total</div>
+                <div className="text-sm opacity-90 mb-2">
+                  Revenu total ({getCurrentPeriodLabel().toLowerCase()})
+                </div>
                 <div className="text-5xl font-bold mb-2">
                   {formatCurrency(totalRevenue)}
                 </div>

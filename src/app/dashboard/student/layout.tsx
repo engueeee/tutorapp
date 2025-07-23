@@ -4,18 +4,18 @@ import React from "react";
 import { RoleGuard } from "@/components/auth/RoleGuard";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 
-export default function TutorDashboardLayout({
+export default function StudentDashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <RoleGuard allowedRoles={["tutor"]}>
+    <RoleGuard allowedRoles={["student"]}>
       <div className="min-h-screen bg-gray-50">
         {/* Enhanced Header with Navigation */}
         <DashboardHeader
-          title="Espace Tuteur"
-          subtitle="Gérez vos cours, étudiants et leçons"
+          title="Espace Étudiant"
+          subtitle="Accédez à vos cours et leçons"
           showUserInfo={true}
           showNavigation={true}
         />

@@ -35,26 +35,12 @@ export function RevenueHistogram({
   subtitle,
   className = "",
 }: RevenueHistogramProps) {
-  // Transform data into monthly histogram with proper aggregation
-  const monthlyAggregation: Record<string, number> = {};
-
-  // Aggregate revenue by month
-  data.forEach((item) => {
-    const monthKey = item.fullDate.substring(0, 7); // Get YYYY-MM part
-    monthlyAggregation[monthKey] =
-      (monthlyAggregation[monthKey] || 0) + (item.revenue || item.value || 0);
-  });
-
-  // Convert to chart format
-  const chartData = Object.entries(monthlyAggregation)
-    .map(([monthKey, revenue]) => ({
-      month: formatMonth(monthKey + "-01"), // Add day to make it a valid date
-      revenue: revenue,
-      fullDate: monthKey,
-    }))
-    .sort(
-      (a, b) => new Date(a.fullDate).getTime() - new Date(b.fullDate).getTime()
-    );
+  // Data is already aggregated by month from the API, just format it for the chart
+  const chartData = data.map((item) => ({
+    month: item.month,
+    revenue: item.revenue,
+    fullDate: item.fullDate,
+  }));
 
   return (
     <Card className={`p-6 bg-white border-[#dfb529] ${className}`}>

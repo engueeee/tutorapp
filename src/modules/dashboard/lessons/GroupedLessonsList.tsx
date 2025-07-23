@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { LessonCard } from "./LessonCard";
 import { EditLessonModal } from "./EditLessonModal";
 import { QuickLessonCreationModal } from "@/components/courses/QuickLessonCreationModal";
@@ -68,6 +69,7 @@ interface Lesson {
 interface GroupedLessonsListProps {
   lessons: Lesson[];
   tutorId: string;
+  loading?: boolean;
   onEditLesson?: (lessonId: string) => void;
   onDeleteLesson?: (lessonId: string) => void;
   onLessonsChanged?: () => void;
@@ -79,6 +81,7 @@ type FilterOption = "all" | "today" | "upcoming" | "past";
 export function GroupedLessonsList({
   lessons,
   tutorId,
+  loading = false,
   onEditLesson,
   onDeleteLesson,
   onLessonsChanged,
@@ -268,16 +271,11 @@ export function GroupedLessonsList({
     setEditLesson(null);
 
     // Make API call in background
-    fetch(`/api/lessons/${editLesson.id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(updated),
-    }).catch((error) => {
-      console.error("Error updating lesson:", error);
-      // Revert optimistic update on error
-      setLocalLessons(null);
+    import("@/lib/api").then(({ lessonsApi }) => {
+      lessonsApi.update(editLesson.id, updated).catch((error) => {
+        // Revert optimistic update on error
+        setLocalLessons(null);
+      });
     });
 
     if (onLessonsChanged) {
@@ -297,13 +295,8 @@ export function GroupedLessonsList({
     if (!deleteLesson) return;
 
     try {
-      const response = await fetch(`/api/lessons/${deleteLesson.id}`, {
-        method: "DELETE",
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to delete lesson");
-      }
+      const { lessonsApi } = await import("@/lib/api");
+      await lessonsApi.delete(deleteLesson.id);
 
       // Optimistically update local state
       setLocalLessons(
@@ -319,7 +312,7 @@ export function GroupedLessonsList({
         onLessonsChanged();
       }
     } catch (error) {
-      console.error("Error deleting lesson:", error);
+      // Handle error silently or show toast
     }
   };
 
@@ -433,7 +426,57 @@ export function GroupedLessonsList({
 
       {/* Grouped Lessons */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {groupedLessons.length === 0 ? (
+        {loading ? (
+          <>
+            {[1, 2, 3, 4].map((i) => (
+              <Card key={i} className="border-[#dfb529] h-fit animate-pulse">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-5 w-5 bg-gray-200 rounded"></div>
+                      <div className="min-w-0 flex-1">
+                        <div className="h-5 bg-gray-200 rounded mb-2"></div>
+                        <div className="flex items-center gap-2">
+                          <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                          <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                          <div className="h-4 w-4 bg-gray-200 rounded"></div>
+                          <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <div className="h-8 w-8 bg-gray-200 rounded"></div>
+                      <div className="h-8 w-8 bg-gray-200 rounded"></div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((j) => (
+                      <div
+                        key={j}
+                        className="p-3 border border-gray-200 rounded-lg"
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="h-4 bg-gray-200 rounded mb-1"></div>
+                            <div className="h-3 bg-gray-200 rounded w-2/3"></div>
+                          </div>
+                          <div className="flex items-center gap-1 ml-2">
+                            <div className="h-6 w-6 bg-gray-200 rounded"></div>
+                            <div className="h-6 w-6 bg-gray-200 rounded"></div>
+                            <div className="h-6 w-6 bg-gray-200 rounded"></div>
+                          </div>
+                        </div>
+                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </>
+        ) : groupedLessons.length === 0 ? (
           <Card className="p-8 text-center col-span-full">
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">

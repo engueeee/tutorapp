@@ -80,7 +80,7 @@ export function EditLessonModal({
           setStudents(data || []);
         })
         .catch((error) => {
-          console.error("EditLessonModal: Error fetching students:", error);
+          // Handle error silently or show toast
         })
         .finally(() => setLoadingStudents(false));
     }

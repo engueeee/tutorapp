@@ -3,19 +3,11 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { userId, firstName, lastName, email } = body;
+    const { userId } = await req.json();
 
-    console.log("Creating student for user:", {
-      userId,
-      firstName,
-      lastName,
-      email,
-    });
-
-    if (!userId || !email) {
+    if (!userId) {
       return NextResponse.json(
-        { error: "userId and email are required" },
+        { error: "User ID is required" },
         { status: 400 }
       );
     }
@@ -26,61 +18,45 @@ export async function POST(req: NextRequest) {
     });
 
     if (!user) {
-      console.log("User not found:", userId);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    console.log("User found:", user);
+    // Check if user is a student - only students should create student records
+    if (user.role !== "student") {
+      return NextResponse.json(
+        { error: "Only students can create student records" },
+        { status: 403 }
+      );
+    }
 
     // Check if student already exists for this user
     const existingStudent = await prisma.student.findFirst({
-      where: { userId } as any,
+      where: { userId: userId },
     });
 
     if (existingStudent) {
-      console.log("Student already exists:", existingStudent);
       return NextResponse.json(
-        {
-          error: "Student already exists for this user",
-          studentId: existingStudent.id,
-        },
+        { error: "Student already exists for this user" },
         { status: 409 }
       );
     }
 
-    console.log("Creating new student record...");
-
-    // Create student record
+    // Create new student record
     const student = await prisma.student.create({
       data: {
-        firstName: firstName || user.firstName || "",
-        lastName: lastName || user.lastName || "",
-        email: email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        tutorId: user.id, // Self-registered users become their own tutor
         userId: userId,
-      } as any,
-    });
-
-    console.log("Student created successfully:", student);
-
-    return NextResponse.json({
-      message: "Student record created successfully",
-      student: {
-        id: student.id,
-        firstName: student.firstName,
-        lastName: student.lastName,
-        email: (student as any).email,
+        onboardingCompleted: false,
       },
     });
-  } catch (error) {
-    console.error(
-      "[API/STUDENTS/CREATE-FOR-USER][POST] Detailed error:",
-      error
-    );
+
+    return NextResponse.json(student, { status: 201 });
+  } catch (err) {
     return NextResponse.json(
-      {
-        error: "Failed to create student record",
-        details: error instanceof Error ? error.message : String(error),
-      },
+      { error: "Failed to create student" },
       { status: 500 }
     );
   }

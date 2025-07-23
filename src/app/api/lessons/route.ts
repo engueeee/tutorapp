@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
 
     if (lessonId) {
       const lesson = await prisma.lesson.findUnique({
-        where: { id: lessonId },
+        where: { id: String(lessonId) },
         include: {
           student: true,
           lessonStudents: {
@@ -54,45 +54,70 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const where: any = {};
-    if (tutorId) where.tutorId = tutorId;
-    if (courseId) where.courseId = courseId;
-    if (studentId) {
-      where.OR = [
-        { studentId: studentId },
-        {
+    let lessons: any[] = [];
+
+    if (tutorId) {
+      lessons = await prisma.lesson.findMany({
+        where: {
+          tutorId: tutorId,
+        },
+        include: {
+          student: true,
           lessonStudents: {
-            some: {
-              studentId: studentId,
+            include: {
+              student: true,
             },
           },
+          course: true,
+          tutor: true,
         },
-      ];
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      });
+    } else if (courseId) {
+      lessons = await prisma.lesson.findMany({
+        where: {
+          courseId: courseId,
+        },
+        include: {
+          student: true,
+          lessonStudents: {
+            include: {
+              student: true,
+            },
+          },
+          course: true,
+          tutor: true,
+        },
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      });
+    } else if (studentId) {
+      lessons = await prisma.lesson.findMany({
+        where: {
+          studentId: studentId,
+        },
+        include: {
+          student: true,
+          lessonStudents: {
+            include: {
+              student: true,
+            },
+          },
+          course: true,
+          tutor: true,
+        },
+        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+      });
     }
 
-    const lessons = await prisma.lesson.findMany({
-      where,
-      include: {
-        student: true,
-        lessonStudents: {
-          include: {
-            student: true,
-          },
-        },
-        course: {
-          include: {
-            courseStudents: { include: { student: true } },
-          },
-        },
-        tutor: true,
-      },
-      orderBy: [{ date: "asc" }, { startTime: "asc" }],
-    });
     return NextResponse.json(lessons);
   } catch (err) {
     console.error("[API/LESSONS][GET]", err);
     return NextResponse.json(
-      { error: "Failed to load lessons" },
+      {
+        error: "Failed to load lessons",
+        details: err instanceof Error ? err.message : String(err),
+        stack: err instanceof Error ? err.stack : undefined,
+      },
       { status: 500 }
     );
   }
@@ -138,8 +163,8 @@ export async function POST(req: NextRequest) {
       const existingEnrollment = await prisma.courseStudent.findUnique({
         where: {
           courseId_studentId: {
-            courseId,
-            studentId,
+            courseId: String(courseId),
+            studentId: String(studentId),
           },
         },
       });
@@ -147,8 +172,8 @@ export async function POST(req: NextRequest) {
       if (!existingEnrollment) {
         await prisma.courseStudent.create({
           data: {
-            courseId,
-            studentId,
+            courseId: String(courseId),
+            studentId: String(studentId),
           },
         });
       }
@@ -210,7 +235,7 @@ export async function DELETE(req: NextRequest) {
         { status: 400 }
       );
     }
-    await prisma.lesson.delete({ where: { id: lessonId } });
+    await prisma.lesson.delete({ where: { id: String(lessonId) } });
     return NextResponse.json({ message: "Lesson deleted" });
   } catch (err) {
     console.error("[API/LESSONS][DELETE]", err);
@@ -249,7 +274,7 @@ export async function PATCH(req: NextRequest) {
     if (studentIds && studentIds.length > 0) {
       // Get the current lesson to find the courseId
       const currentLesson = await prisma.lesson.findUnique({
-        where: { id: lessonId },
+        where: { id: String(lessonId) },
         select: { courseId: true },
       });
 
@@ -268,8 +293,8 @@ export async function PATCH(req: NextRequest) {
         const existingEnrollment = await prisma.courseStudent.findUnique({
           where: {
             courseId_studentId: {
-              courseId: currentLesson.courseId,
-              studentId,
+              courseId: String(currentLesson.courseId),
+              studentId: String(studentId),
             },
           },
         });
@@ -277,8 +302,8 @@ export async function PATCH(req: NextRequest) {
         if (!existingEnrollment) {
           await prisma.courseStudent.create({
             data: {
-              courseId: currentLesson.courseId,
-              studentId,
+              courseId: String(currentLesson.courseId),
+              studentId: String(studentId),
             },
           });
         }
@@ -286,19 +311,19 @@ export async function PATCH(req: NextRequest) {
 
       // Update lesson-student relationships
       await prisma.lessonStudent.deleteMany({
-        where: { lessonId },
+        where: { lessonId: String(lessonId) },
       });
 
       await prisma.lessonStudent.createMany({
         data: studentIds.map((studentId) => ({
-          lessonId,
-          studentId,
+          lessonId: String(lessonId),
+          studentId: String(studentId),
         })),
       });
     }
 
     const updated = await prisma.lesson.update({
-      where: { id: lessonId },
+      where: { id: String(lessonId) },
       data: updateData,
       include: {
         student: true,

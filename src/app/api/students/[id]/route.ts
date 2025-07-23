@@ -1,57 +1,37 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 
 // 🔄 PATCH : mettre à jour un étudiant
 export async function PATCH(
-  req: Request,
+  req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const studentId = params.id; // ✅ sans await
-
-  const {
-    firstName,
-    lastName,
-    age,
-    email,
-    grade,
-    phoneNumber,
-    profilePhoto,
-    onboardingCompleted,
-    hourlyRate,
-  } = await req.json();
-
-  console.log("PATCH student with data:", {
-    firstName,
-    lastName,
-    age,
-    email,
-    grade,
-    phoneNumber,
-    profilePhoto,
-    onboardingCompleted,
-  });
-
   try {
+    const data = await req.json();
+    const { id } = params;
+
     const updated = await prisma.student.update({
-      where: { id: studentId },
+      where: { id: String(id) },
       data: {
-        firstName,
-        lastName,
-        age,
-        email,
-        grade,
-        phoneNumber,
-        profilePhoto,
-        onboardingCompleted,
-        hourlyRate,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        age: data.age,
+        contact: data.contact,
+        grade: data.grade,
+        email: data.email,
+        phoneNumber: data.phoneNumber,
+        profilePhoto: data.profilePhoto,
+        onboardingCompleted: data.onboardingCompleted,
+        hourlyRate: data.hourlyRate,
+        lastActivity: new Date(),
       },
     });
-    console.log("Student updated successfully:", updated);
+
     return NextResponse.json(updated);
   } catch (err) {
-    console.error("[PATCH_STUDENT]", err);
     return NextResponse.json(
-      { error: "Erreur lors de la mise à jour" },
+      { error: "Failed to update student" },
       { status: 500 }
     );
   }

@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { EditCourseForm } from "@/components/courses/EditCourseForm";
+import { QuickLessonCreationModal } from "@/components/courses/QuickLessonCreationModal";
 import {
   Dialog,
   DialogContent,
@@ -8,21 +12,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import {
-  Calendar,
-  Clock,
   BookOpen,
   Users,
+  Calendar,
   Plus,
-  RefreshCw,
   Edit,
   Trash2,
-  MoreHorizontal,
+  ChevronRight,
+  Video,
+  Clock,
+  RefreshCw,
 } from "lucide-react";
-import { QuickLessonCreationModal } from "@/components/courses/QuickLessonCreationModal";
-import { EditCourseForm } from "@/components/courses/EditCourseForm";
 import { Course } from "../types";
+import { toast } from "sonner";
 import {
   Select,
   SelectTrigger,
@@ -52,6 +55,7 @@ export function CoursesSection({
   const [isEditCourseOpen, setIsEditCourseOpen] = useState(false);
   const [deletingCourse, setDeletingCourse] = useState<Course | null>(null);
   const [isDeleteCourseOpen, setIsDeleteCourseOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Map unified Course type to display shape for tutor dashboard
   const displayCourses = courses.map((course) => {
@@ -227,237 +231,262 @@ export function CoursesSection({
               </tr>
             </thead>
             <tbody>
-              {displayCourses.map((course) => (
-                <tr key={course.title} className="border-b">
-                  <td className="py-2 font-medium">{course.title}</td>
-                  <td className="py-2">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Users className="h-4 w-4 text-gray-500" />
-                      <span>{course.studentsCount}</span>
-                      {course.lessonStudents &&
-                        course.lessonStudents.length > 0 && (
-                          <div className="text-xs text-gray-500">
-                            (
-                            {course.lessonStudents.slice(0, 3).map((s, i) => (
-                              <span key={s.id} className="mr-1">
-                                {s.firstName} {s.lastName.charAt(0)}.
-                                {i <
-                                Math.min(2, course.lessonStudents.length - 1)
-                                  ? ","
-                                  : ""}
-                              </span>
-                            ))}
-                            {course.lessonStudents.length > 3 && (
-                              <span>...</span>
-                            )}
-                            )
-                          </div>
-                        )}
-                    </div>
-                  </td>
-                  <td className="py-2">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-gray-500" />
-                      <span>{course.lessonsCount}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span
-                      className={`px-2 py-1 rounded text-xs ${
-                        course.status === "Active"
-                          ? "bg-green-100 text-green-800"
-                          : course.status === "Upcoming"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {course.status}
-                    </span>
-                  </td>
-                  <td className="py-2">
-                    <div className="flex flex-col sm:flex-row gap-2">
-                      {/* View Lessons Button (keep as is) */}
-                      <Dialog
-                        open={
-                          isLessonViewOpen && selectedCourse?.id === course.id
-                        }
-                        onOpenChange={setIsLessonViewOpen}
-                      >
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="primary"
-                            size="sm"
-                            onClick={() => handleViewLessons(course)}
-                            className="flex items-center gap-1"
-                            aria-label="Voir les leçons"
-                          >
-                            <BookOpen className="h-4 w-4" />
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-                          <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2 justify-between">
-                              <div className="flex items-center gap-2">
-                                <BookOpen className="h-5 w-5" />
-                                Lessons - {selectedCourse?.title}
-                              </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() =>
-                                  handleViewLessons(selectedCourse!)
-                                }
-                                className="flex items-center gap-1"
-                              >
-                                <RefreshCw className="h-4 w-4" />
-                                Refresh
-                              </Button>
-                            </DialogTitle>
-                          </DialogHeader>
-                          <div className="space-y-4">
-                            {selectedCourse?.lessons &&
-                            selectedCourse.lessons.length > 0 ? (
-                              <div className="grid gap-4">
-                                {selectedCourse.lessons.map((lesson) => (
-                                  <div
-                                    key={lesson.id}
-                                    className="border rounded-lg p-4 hover:shadow-md transition-shadow"
-                                  >
-                                    <div className="flex items-start justify-between mb-3">
-                                      <h3 className="font-semibold text-lg text-gray-900">
-                                        {lesson.title}
-                                      </h3>
-                                      {lesson.subject && (
-                                        <Badge variant="secondary">
-                                          {lesson.subject}
-                                        </Badge>
-                                      )}
-                                    </div>
-
-                                    {lesson.description && (
-                                      <p className="text-gray-600 text-sm mb-3">
-                                        {lesson.description}
-                                      </p>
-                                    )}
-
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                      <div className="flex items-center gap-2">
-                                        <Calendar className="h-4 w-4 text-gray-500" />
-                                        <span className="font-medium">
-                                          Date:
-                                        </span>
-                                        <span>{formatDate(lesson.date)}</span>
-                                      </div>
-
-                                      <div className="flex items-center gap-2">
-                                        <Clock className="h-4 w-4 text-gray-500" />
-                                        <span className="font-medium">
-                                          Time:
-                                        </span>
-                                        <span>
-                                          {formatTime(lesson.startTime)}
-                                        </span>
-                                      </div>
-
-                                      <div className="flex items-center gap-2">
-                                        <Clock className="h-4 w-4 text-gray-500" />
-                                        <span className="font-medium">
-                                          Duration:
-                                        </span>
-                                        <span>{lesson.duration}</span>
-                                      </div>
-                                    </div>
-
-                                    <div className="mt-3 pt-3 border-t">
-                                      <div className="flex items-center gap-2">
-                                        <Users className="h-4 w-4 text-gray-500" />
-                                        <span className="font-medium">
-                                          Students:
-                                        </span>
-                                        <span>
-                                          {(lesson.lessonStudents &&
-                                          lesson.lessonStudents.length > 0
-                                            ? lesson.lessonStudents.map(
-                                                (ls) => ls.student
-                                              )
-                                            : lesson.student
-                                            ? [lesson.student]
-                                            : []
-                                          ).map((student, index, array) => (
-                                            <span key={student.id}>
-                                              {student.firstName}{" "}
-                                              {student.lastName}
-                                              {index < array.length - 1
-                                                ? ", "
-                                                : ""}
-                                            </span>
-                                          ))}
-                                        </span>
-                                      </div>
-                                    </div>
-
-                                    {lesson.zoomLink && (
-                                      <div className="mt-3 pt-3 border-t">
-                                        <a
-                                          href={lesson.zoomLink}
-                                          target="_blank"
-                                          rel="noopener noreferrer"
-                                          className="text-blue-600 hover:text-blue-800 text-sm underline"
-                                        >
-                                          Zoom Link
-                                        </a>
-                                      </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="text-center py-8">
-                                <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                                  No Lessons
-                                </h3>
-                                <p className="text-gray-600">
-                                  No lessons have been created for this course.
-                                </p>
-                              </div>
-                            )}
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-
-                      {/* Actions Dropdown: Add, Edit, Delete */}
-                      <Select
-                        onValueChange={(value) => {
-                          if (value === "add") {
-                            setSelectedCourseForQuickCreate(course.id);
-                            setQuickCreateOpen(true);
-                          }
-                          if (value === "edit") handleEditCourse(course);
-                          if (value === "delete") handleDeleteCourse(course);
-                        }}
-                      >
-                        <SelectTrigger
-                          className="w-8 h-8 p-0 border-none bg-transparent hover:bg-accent"
-                          aria-label="Actions"
-                        ></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="add">
-                            <Plus className="h-4 w-4 mr-2" /> Ajouter une leçon
-                          </SelectItem>
-                          <SelectItem value="edit">
-                            <Edit className="h-4 w-4 mr-2" /> Modifier le cours
-                          </SelectItem>
-                          <SelectItem value="delete">
-                            <Trash2 className="h-4 w-4 mr-2 text-red-600" />{" "}
-                            Supprimer le cours
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center">
+                    <LoadingSpinner />
+                    <p className="mt-2 text-gray-600">Loading courses...</p>
                   </td>
                 </tr>
-              ))}
+              ) : displayCourses.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="py-8 text-center">
+                    <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      No Courses Found
+                    </h3>
+                    <p className="text-gray-600">
+                      You haven't created any courses yet. Click "Add Course" to
+                      get started.
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                displayCourses.map((course) => (
+                  <tr key={course.title} className="border-b">
+                    <td className="py-2 font-medium">{course.title}</td>
+                    <td className="py-2">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Users className="h-4 w-4 text-gray-500" />
+                        <span>{course.studentsCount}</span>
+                        {course.lessonStudents &&
+                          course.lessonStudents.length > 0 && (
+                            <div className="text-xs text-gray-500">
+                              (
+                              {course.lessonStudents.slice(0, 3).map((s, i) => (
+                                <span key={s.id} className="mr-1">
+                                  {s.firstName} {s.lastName.charAt(0)}.
+                                  {i <
+                                  Math.min(2, course.lessonStudents.length - 1)
+                                    ? ","
+                                    : ""}
+                                </span>
+                              ))}
+                              {course.lessonStudents.length > 3 && (
+                                <span>...</span>
+                              )}
+                              )
+                            </div>
+                          )}
+                      </div>
+                    </td>
+                    <td className="py-2">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4 text-gray-500" />
+                        <span>{course.lessonsCount}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span
+                        className={`px-2 py-1 rounded text-xs ${
+                          course.status === "Active"
+                            ? "bg-green-100 text-green-800"
+                            : course.status === "Upcoming"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {course.status}
+                      </span>
+                    </td>
+                    <td className="py-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        {/* View Lessons Button (keep as is) */}
+                        <Dialog
+                          open={
+                            isLessonViewOpen && selectedCourse?.id === course.id
+                          }
+                          onOpenChange={setIsLessonViewOpen}
+                        >
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              onClick={() => handleViewLessons(course)}
+                              className="flex items-center gap-1"
+                              aria-label="Voir les leçons"
+                            >
+                              <BookOpen className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+                            <DialogHeader>
+                              <DialogTitle className="flex items-center gap-2 justify-between">
+                                <div className="flex items-center gap-2">
+                                  <BookOpen className="h-5 w-5" />
+                                  Lessons - {selectedCourse?.title}
+                                </div>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    handleViewLessons(selectedCourse!)
+                                  }
+                                  className="flex items-center gap-1"
+                                >
+                                  <RefreshCw className="h-4 w-4" />
+                                  Refresh
+                                </Button>
+                              </DialogTitle>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              {selectedCourse?.lessons &&
+                              selectedCourse.lessons.length > 0 ? (
+                                <div className="grid gap-4">
+                                  {selectedCourse.lessons.map((lesson) => (
+                                    <div
+                                      key={lesson.id}
+                                      className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+                                    >
+                                      <div className="flex items-start justify-between mb-3">
+                                        <h3 className="font-semibold text-lg text-gray-900">
+                                          {lesson.title}
+                                        </h3>
+                                        {lesson.subject && (
+                                          <Badge variant="secondary">
+                                            {lesson.subject}
+                                          </Badge>
+                                        )}
+                                      </div>
+
+                                      {lesson.description && (
+                                        <p className="text-gray-600 text-sm mb-3">
+                                          {lesson.description}
+                                        </p>
+                                      )}
+
+                                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                        <div className="flex items-center gap-2">
+                                          <Calendar className="h-4 w-4 text-gray-500" />
+                                          <span className="font-medium">
+                                            Date:
+                                          </span>
+                                          <span>{formatDate(lesson.date)}</span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                          <Clock className="h-4 w-4 text-gray-500" />
+                                          <span className="font-medium">
+                                            Time:
+                                          </span>
+                                          <span>
+                                            {formatTime(lesson.startTime)}
+                                          </span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                          <Clock className="h-4 w-4 text-gray-500" />
+                                          <span className="font-medium">
+                                            Duration:
+                                          </span>
+                                          <span>{lesson.duration}</span>
+                                        </div>
+                                      </div>
+
+                                      <div className="mt-3 pt-3 border-t">
+                                        <div className="flex items-center gap-2">
+                                          <Users className="h-4 w-4 text-gray-500" />
+                                          <span className="font-medium">
+                                            Students:
+                                          </span>
+                                          <span>
+                                            {(lesson.lessonStudents &&
+                                            lesson.lessonStudents.length > 0
+                                              ? lesson.lessonStudents.map(
+                                                  (ls) => ls.student
+                                                )
+                                              : lesson.student
+                                              ? [lesson.student]
+                                              : []
+                                            ).map((student, index, array) => (
+                                              <span key={student.id}>
+                                                {student.firstName}{" "}
+                                                {student.lastName}
+                                                {index < array.length - 1
+                                                  ? ", "
+                                                  : ""}
+                                              </span>
+                                            ))}
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      {lesson.zoomLink && (
+                                        <div className="mt-3 pt-3 border-t">
+                                          <a
+                                            href={lesson.zoomLink}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-blue-600 hover:text-blue-800 text-sm underline"
+                                          >
+                                            Zoom Link
+                                          </a>
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="text-center py-8">
+                                  <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                  <h3 className="text-lg font-medium text-gray-900 mb-2">
+                                    No Lessons
+                                  </h3>
+                                  <p className="text-gray-600">
+                                    No lessons have been created for this
+                                    course.
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+
+                        {/* Actions Dropdown: Add, Edit, Delete */}
+                        <Select
+                          onValueChange={(value) => {
+                            if (value === "add") {
+                              setSelectedCourseForQuickCreate(course.id);
+                              setQuickCreateOpen(true);
+                            }
+                            if (value === "edit") handleEditCourse(course);
+                            if (value === "delete") handleDeleteCourse(course);
+                          }}
+                        >
+                          <SelectTrigger
+                            className="w-8 h-8 p-0 border-none bg-transparent hover:bg-accent"
+                            aria-label="Actions"
+                          ></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="add">
+                              <Plus className="h-4 w-4 mr-2" /> Ajouter une
+                              leçon
+                            </SelectItem>
+                            <SelectItem value="edit">
+                              <Edit className="h-4 w-4 mr-2" /> Modifier le
+                              cours
+                            </SelectItem>
+                            <SelectItem value="delete">
+                              <Trash2 className="h-4 w-4 mr-2 text-red-600" />{" "}
+                              Supprimer le cours
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </CardContent>

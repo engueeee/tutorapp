@@ -88,8 +88,15 @@ export async function GET(req: NextRequest) {
       end = endOfQuarter(endDate ? parseISO(endDate) : now);
       break;
     case "year":
-      start = startOfYear(startDate ? parseISO(startDate) : now);
-      end = endOfYear(endDate ? parseISO(endDate) : now);
+      // For yearly view, if no specific dates provided, use the current year
+      if (startDate && endDate) {
+        start = startOfYear(parseISO(startDate));
+        end = endOfYear(parseISO(endDate));
+      } else {
+        // Default to current year
+        start = startOfYear(now);
+        end = endOfYear(now);
+      }
       break;
     default:
       start = startOfMonth(now);
@@ -220,8 +227,10 @@ export async function GET(req: NextRequest) {
       filteredStudentContributions = studentContributions;
     }
 
+    // Add to total revenue for ALL lessons in the period (not just past ones)
+    totalRevenue += lessonRevenue;
+
     if (isPast) {
-      totalRevenue += lessonRevenue;
       lessonsCompleted++;
 
       // Track unique student hourly rates for overall average calculation
@@ -264,8 +273,15 @@ export async function GET(req: NextRequest) {
       students: filteredStudentContributions,
     });
 
-    // Group by period (e.g., day) for chart data
-    const periodKey = lesson.date;
+    // Group by period for chart data
+    let periodKey: string;
+    if (range === "year") {
+      // For yearly view, group by month (YYYY-MM)
+      periodKey = lesson.date.substring(0, 7);
+    } else {
+      // For other views, group by day
+      periodKey = lesson.date;
+    }
     revenueByPeriod[periodKey] =
       (revenueByPeriod[periodKey] || 0) + lessonRevenue;
   }
@@ -281,11 +297,10 @@ export async function GET(req: NextRequest) {
       completeRevenueByPeriod[monthKey] = 0;
     });
 
-    // Add actual revenue data
-    Object.entries(revenueByPeriod).forEach(([date, revenue]) => {
-      const monthKey = date.substring(0, 7); // Get YYYY-MM part
+    // Add actual revenue data (already aggregated by month)
+    Object.entries(revenueByPeriod).forEach(([monthKey, revenue]) => {
       if (completeRevenueByPeriod.hasOwnProperty(monthKey)) {
-        completeRevenueByPeriod[monthKey] += revenue;
+        completeRevenueByPeriod[monthKey] = revenue;
       }
     });
 
@@ -300,52 +315,11 @@ export async function GET(req: NextRequest) {
       ? uniqueRates.reduce((sum, rate) => sum + rate, 0) / uniqueRates.length
       : 0;
 
-  // Projected revenue (future lessons)
+  // Projected revenue (future lessons outside the current period)
+  // This represents revenue from future lessons that are not in the current filter period
   let projectedRevenue = 0;
-  for (const lesson of lessons) {
-    if (new Date(lesson.date) >= now) {
-      const hours = parseDurationToHours(lesson.duration);
-
-      // Collect all students for this lesson
-      const allStudents = [
-        lesson.student,
-        ...lesson.lessonStudents.map((ls) => ls.student),
-      ].filter(Boolean);
-
-      // Remove duplicates based on student ID to avoid counting the same student twice
-      const uniqueStudents = allStudents.filter(
-        (student, index, self) =>
-          index === self.findIndex((s) => s.id === student.id)
-      );
-
-      // If a specific student is filtered, only count their contribution
-      let lessonRevenue: number;
-
-      if (studentId) {
-        // Only include the selected student's contribution
-        const selectedStudent = uniqueStudents.find(
-          (student) => student.id === studentId
-        );
-
-        if (selectedStudent) {
-          const rate = selectedStudent.hourlyRate
-            ? Number(selectedStudent.hourlyRate)
-            : 0;
-          lessonRevenue = rate * hours;
-        } else {
-          lessonRevenue = 0;
-        }
-      } else {
-        // No student filter - count all students
-        lessonRevenue = uniqueStudents.reduce((total, student) => {
-          const rate = student.hourlyRate ? Number(student.hourlyRate) : 0;
-          return total + rate * hours;
-        }, 0);
-      }
-
-      projectedRevenue += lessonRevenue;
-    }
-  }
+  // For now, we'll keep this as 0 since we're including all lessons in totalRevenue
+  // This could be enhanced to show projected revenue for the next period
 
   return NextResponse.json({
     totalRevenue,

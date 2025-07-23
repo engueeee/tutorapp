@@ -7,11 +7,13 @@ import { toast } from "sonner";
 
 export function LogoutButton() {
   const { logout } = useAuth();
-  const router = useRouter();
 
   const handleLogout = () => {
-    logout(); // nettoie le contexte + localStorage
-    router.push("/"); // redirection vers la page d'accueil
+    // Clear auth data
+    logout();
+
+    // Use window.location to bypass router and RoleGuard
+    window.location.href = "/";
   };
 
   return (

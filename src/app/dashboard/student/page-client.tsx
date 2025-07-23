@@ -57,32 +57,39 @@ export default function StudentDashboardClient() {
           }
         }
 
-        // Last resort: create a student record for this user
-        response = await fetch("/api/students/create-for-user", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            userId: user.id,
-            firstName: user.firstName || "",
-            lastName: user.lastName || "",
-            email: user.email,
-          }),
-        });
+        // Last resort: create a student record for this user (ONLY if user is a student)
+        if (user.role === "student") {
+          response = await fetch("/api/students/create-for-user", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              userId: user.id,
+              firstName: user.firstName || "",
+              lastName: user.lastName || "",
+              email: user.email,
+            }),
+          });
 
-        if (response.ok) {
-          const result = await response.json();
-          setStudentId(result.student.id);
-          setOnboardingCompleted(false); // New students need onboarding
-          setStudentData(result.student);
-          return;
+          if (response.ok) {
+            const result = await response.json();
+            setStudentId(result.student.id);
+            setOnboardingCompleted(false); // New students need onboarding
+            setStudentData(result.student);
+            return;
+          } else {
+            const errorData = await response.json().catch(() => ({}));
+            setError(
+              `Impossible de créer le profil étudiant: ${
+                errorData.details || errorData.error || "Erreur inconnue"
+              }`
+            );
+          }
         } else {
-          const errorData = await response.json().catch(() => ({}));
+          // If user is not a student, set an error
           setError(
-            `Impossible de créer le profil étudiant: ${
-              errorData.details || errorData.error || "Erreur inconnue"
-            }`
+            "Accès non autorisé. Cette page est réservée aux étudiants."
           );
         }
       } catch (error) {
@@ -120,8 +127,10 @@ export default function StudentDashboardClient() {
             </Button>
             <Button
               onClick={() => {
-                logout();
                 router.push("/");
+                setTimeout(() => {
+                  logout();
+                }, 100);
               }}
               variant="destructive"
             >
@@ -198,7 +207,16 @@ export default function StudentDashboardClient() {
               <span className="text-sm text-gray-500">
                 Besoin d'aide ? Contactez votre tuteur depuis la section dédiée.
               </span>
-              <Button variant="destructive" size="sm" onClick={logout}>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => {
+                  router.push("/");
+                  setTimeout(() => {
+                    logout();
+                  }, 100);
+                }}
+              >
                 Se déconnecter
               </Button>
             </div>
@@ -214,10 +232,10 @@ export default function StudentDashboardClient() {
   return (
     <RoleGuard allowedRoles={["student"]}>
       <StudentDashboardWithActivity
-        userName={userName}
         studentId={studentId}
         lessons={lessons}
         homework={homework}
+        userName={userName}
       />
     </RoleGuard>
   );

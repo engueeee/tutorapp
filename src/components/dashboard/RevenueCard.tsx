@@ -14,8 +14,10 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 
 interface RevenueCardProps {
-  totalRevenue: number;
-  growthPercentage: number;
+  monthlyRevenue: number;
+  weeklyRevenue: number;
+  monthlyGrowthPercentage: number;
+  weeklyGrowthPercentage: number;
   monthlyData: Array<{ date: string; revenue: number }>;
   weeklyData: Array<{ date: string; revenue: number }>;
   title?: string;
@@ -30,8 +32,10 @@ function formatCurrency(value: number, currency: string = "EUR") {
 }
 
 export function RevenueCard({
-  totalRevenue,
-  growthPercentage,
+  monthlyRevenue,
+  weeklyRevenue,
+  monthlyGrowthPercentage,
+  weeklyGrowthPercentage,
   monthlyData,
   weeklyData,
   title = "Total Revenue",
@@ -39,7 +43,9 @@ export function RevenueCard({
 }: RevenueCardProps) {
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [mounted, setMounted] = useState(false);
-  const isPositiveGrowth = growthPercentage >= 0;
+  const currentGrowthPercentage =
+    viewMode === "week" ? weeklyGrowthPercentage : monthlyGrowthPercentage;
+  const isPositiveGrowth = currentGrowthPercentage >= 0;
 
   useEffect(() => {
     setMounted(true);
@@ -85,7 +91,10 @@ export function RevenueCard({
       {/* Revenue and Growth */}
       <div className="mb-6">
         <div className="text-3xl font-bold text-[#050f8b] mb-2">
-          {formatCurrency(totalRevenue, currency)}
+          {formatCurrency(
+            viewMode === "week" ? weeklyRevenue : monthlyRevenue,
+            currency
+          )}
         </div>
         <div className="flex items-center gap-2">
           {isPositiveGrowth ? (
@@ -99,7 +108,8 @@ export function RevenueCard({
             }`}
           >
             {isPositiveGrowth ? "+" : ""}
-            {growthPercentage.toFixed(1)}% from last month
+            {currentGrowthPercentage.toFixed(1)}% from last{" "}
+            {viewMode === "week" ? "week" : "month"}
           </span>
         </div>
       </div>

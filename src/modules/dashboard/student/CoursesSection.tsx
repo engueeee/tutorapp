@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, User, Calendar, Clock } from "lucide-react";
+import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 
 interface CoursesSectionProps {
   studentId: string;
@@ -41,33 +42,11 @@ export function CoursesSection({ studentId }: CoursesSectionProps) {
     const fetchCourses = async () => {
       try {
         setLoading(true);
-        console.log(
-          "CoursesSection: Fetching courses for studentId:",
-          studentId
-        );
-        console.log(
-          "CoursesSection: studentId value:",
-          JSON.stringify(studentId)
-        );
+        setError(null);
 
         if (!studentId || studentId.trim() === "") {
-          console.log("CoursesSection: studentId is invalid, skipping fetch");
           setLoading(false);
           return;
-        }
-
-        // First, let's verify the student exists
-        const studentResponse = await fetch(
-          `/api/students?userId=${studentId}`
-        );
-        console.log(
-          "CoursesSection: Student check response:",
-          studentResponse.status
-        );
-
-        if (studentResponse.ok) {
-          const studentData = await studentResponse.json();
-          console.log("CoursesSection: Student data:", studentData);
         }
 
         const response = await fetch(
@@ -78,28 +57,19 @@ export function CoursesSection({ studentId }: CoursesSectionProps) {
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          console.error("CoursesSection: API error:", errorData);
           throw new Error(
             `Failed to fetch courses: ${errorData.error || response.statusText}`
           );
         }
 
         const data = await response.json();
-        console.log("CoursesSection: Courses data:", data);
-        console.log("CoursesSection: Courses data type:", typeof data);
-        console.log(
-          "CoursesSection: Courses data length:",
-          Array.isArray(data) ? data.length : "Not an array"
-        );
 
         if (Array.isArray(data)) {
           setCourses(data);
         } else {
-          console.error("CoursesSection: API returned non-array:", data);
           setError("Invalid data format received from server");
         }
       } catch (err) {
-        console.error("CoursesSection: Error fetching courses:", err);
         setError(err instanceof Error ? err.message : "Failed to load courses");
       } finally {
         setLoading(false);
@@ -145,12 +115,7 @@ export function CoursesSection({ studentId }: CoursesSectionProps) {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-            <p className="mt-2 text-sm text-gray-600">
-              Chargement des cours...
-            </p>
-          </div>
+          <LoadingSkeleton />
         </CardContent>
       </Card>
     );
