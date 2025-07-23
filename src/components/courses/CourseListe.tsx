@@ -281,7 +281,7 @@ export function CourseList({ tutorId }: CourseListProps) {
                     <EditCourseStudentsModal
                       course={course}
                       tutorId={tutorId}
-                      onStudentAdded={refreshCourses}
+                      onStudentsChanged={refreshCourses}
                     />
                     <Button variant="secondary" size="sm" className="ml-2">
                       Modifier
