@@ -8,114 +8,96 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String 
-  firstName String   
-  lastName  String   
-  role      String   @default("tutor")
-  phoneNumber String? // Phone number for contact
-  profilePhoto String? // URL to profile photo
-  onboardingCompleted Boolean @default(false) // Track if onboarding is completed
-  
-  // Tutor-specific fields
-  bio       String? // Biography/description for tutors
-  subjects  String[] // Subjects taught by tutor
-  experience String? // Teaching experience description
-  education String? // Education level/background
-  
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  courses   Course[] // 👈 relation inverse
-  students  Student[] @relation("TutorStudents") // Students created by this tutor
-  studentAccount Student? @relation("UserStudentAccount") // Student account linked to this user (for self-registered students)
-  lessons   Lesson[]
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  password            String
+  role                String    @default("tutor")
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  firstName           String
+  lastName            String
+  onboardingCompleted Boolean   @default(false)
+  phoneNumber         String?
+  profilePhoto        String?   @db.Text
+  bio                 String?
+  education           String?
+  experience          String?
+  subjects            String[]
+  courses             Course[]
+  lessons             Lesson[]
+  students            Student[] @relation("TutorStudents")
+  studentAccount      Student?  @relation("UserStudentAccount")
 }
 
 model Course {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  zoomLink    String?  // Optional zoom link for the course
-
-  tutor       User     @relation(fields: [tutorId], references: [id])
-  tutorId     String
-  
-  createdAt   DateTime @default(now())
-  lessons     Lesson[]  
+  id             String          @id @default(cuid())
+  title          String
+  description    String?
+  tutorId        String
+  createdAt      DateTime        @default(now())
+  zoomLink       String?
+  tutor          User            @relation(fields: [tutorId], references: [id])
   courseStudents CourseStudent[]
+  lessons        Lesson[]
 }
 
 model Student {
-  id        String   @id @default(cuid())
-  firstName String   
-  lastName  String   
-  age       Int?
-  contact   String?
-  grade     String?
-  email     String?  @unique // Email for linking with user accounts
-  phoneNumber String? // Phone number for contact
-  profilePhoto String? // URL to profile photo
-  lastActivity DateTime? // Track when student was last active
-  onboardingCompleted Boolean @default(false) // Track if onboarding is completed
-  hourlyRate Decimal? @db.Decimal(10,2) // Hourly rate for this student (per tutor)
-  createdAt DateTime @default(now())
-
-  tutor     User?    @relation("TutorStudents", fields: [tutorId], references: [id]) // Optional - for tutor-created students
-  tutorId   String?
-  
-  user      User?    @relation("UserStudentAccount", fields: [userId], references: [id]) // Optional - for self-registered students
-  userId    String?  @unique
-  
-  lessons   Lesson[]
-  courseStudents CourseStudent[]
-  lessonStudents LessonStudent[]
+  id                  String          @id @default(cuid())
+  firstName           String
+  lastName            String
+  age                 Int?
+  contact             String?
+  grade               String?
+  createdAt           DateTime        @default(now())
+  tutorId             String?
+  email               String?         @unique
+  userId              String?         @unique
+  onboardingCompleted Boolean         @default(false)
+  phoneNumber         String?
+  profilePhoto        String?         @db.Text
+  hourlyRate          Decimal?        @db.Decimal(10, 2)
+  lastActivity        DateTime?
+  courseStudents      CourseStudent[]
+  lessons             Lesson[]
+  lessonStudents      LessonStudent[]
+  tutor               User?           @relation("TutorStudents", fields: [tutorId], references: [id])
+  user                User?           @relation("UserStudentAccount", fields: [userId], references: [id])
 }
 
 model Lesson {
-  id          String   @id @default(cuid())
-  date        String
-  title       String
-  description String?
-  
-  startTime   String
-  duration    String
-  zoomLink    String?
-  subject     String?
-
-  createdAt   DateTime @default(now())
-
-  tutor       User     @relation(fields: [tutorId], references: [id])
-  tutorId     String
-
-  course      Course   @relation(fields: [courseId], references: [id])
-  courseId    String
-
-  student     Student  @relation(fields: [studentId], references: [id])
-  studentId   String
-  
-  // New relationship for multiple students
+  id             String          @id @default(cuid())
+  date           String
+  startTime      String
+  duration       String
+  zoomLink       String?
+  subject        String?
+  createdAt      DateTime        @default(now())
+  tutorId        String
+  studentId      String
+  description    String?
+  title          String
+  courseId       String
+  tutorComment   String?
+  course         Course          @relation(fields: [courseId], references: [id])
+  student        Student         @relation(fields: [studentId], references: [id])
+  tutor          User            @relation(fields: [tutorId], references: [id])
   lessonStudents LessonStudent[]
 }
 
 model LessonStudent {
-  lessonId String
+  lessonId  String
   studentId String
-
-  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  lesson    Lesson  @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@id([lessonId, studentId])
 }
 
 model CourseStudent {
-  courseId String
+  courseId  String
   studentId String
-
-  course Course @relation(fields: [courseId], references: [id])
-  student Student @relation(fields: [studentId], references: [id])
+  course    Course  @relation(fields: [courseId], references: [id])
+  student   Student @relation(fields: [studentId], references: [id])
 
   @@id([courseId, studentId])
 }
-

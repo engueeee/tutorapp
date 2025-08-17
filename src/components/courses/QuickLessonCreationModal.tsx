@@ -23,6 +23,7 @@ import { Course } from "@/modules/dashboard/types";
 
 interface QuickLessonCreationModalProps {
   tutorId: string;
+  courseId?: string; // Course ID for creating lessons in a specific course
   onLessonCreated?: () => void;
   selectedCourseId?: string; // Pre-fill course if provided
   trigger?: React.ReactNode; // Custom trigger element
@@ -32,6 +33,7 @@ interface QuickLessonCreationModalProps {
 
 export function QuickLessonCreationModal({
   tutorId,
+  courseId,
   onLessonCreated,
   selectedCourseId,
   trigger,
@@ -55,12 +57,14 @@ export function QuickLessonCreationModal({
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
 
-  // Set the selected course when selectedCourseId prop changes
+  // Set the selected course when selectedCourseId or courseId prop changes
   useEffect(() => {
-    if (selectedCourseId) {
+    if (courseId) {
+      setCurrentSelectedCourseId(courseId);
+    } else if (selectedCourseId) {
       setCurrentSelectedCourseId(selectedCourseId);
     }
-  }, [selectedCourseId]);
+  }, [selectedCourseId, courseId]);
 
   // Fetch courses
   useEffect(() => {

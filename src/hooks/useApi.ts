@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 interface CacheEntry<T> {
   data: T;
@@ -36,6 +36,8 @@ export function useApi<T>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const focusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastFocusTimeRef = useRef<number>(0);
 
   const fetchData = useCallback(
     async (forceRefetch = false) => {
@@ -207,11 +209,44 @@ export function useApi<T>(
     if (!refetchOnWindowFocus || !url) return;
 
     const handleFocus = () => {
-      fetchData(true);
+      const now = Date.now();
+
+      // Prevent rapid successive focus events (within 500ms)
+      if (now - lastFocusTimeRef.current < 500) {
+        return;
+      }
+
+      lastFocusTimeRef.current = now;
+
+      // Clear any existing timeout
+      if (focusTimeoutRef.current) {
+        clearTimeout(focusTimeoutRef.current);
+      }
+
+      // Debounce the refetch to prevent multiple rapid requests
+      focusTimeoutRef.current = setTimeout(() => {
+        // Only refetch if data is stale (older than staleTime)
+        const cacheKey = url;
+        const cachedEntry = cache.get(cacheKey);
+        const now = Date.now();
+
+        if (!cachedEntry || now - cachedEntry.timestamp >= staleTime) {
+          console.log(`🔄 Refetching stale data for ${url} on window focus`);
+          fetchData(true);
+        } else {
+          console.log(`✅ Data is fresh, skipping refetch for ${url}`);
+        }
+      }, 1000); // 1 second delay
     };
 
     window.addEventListener("focus", handleFocus);
-    return () => window.removeEventListener("focus", handleFocus);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      if (focusTimeoutRef.current) {
+        clearTimeout(focusTimeoutRef.current);
+      }
+    };
   }, [url, refetchOnWindowFocus, fetchData]);
 
   return { data, loading, error, refetch, mutate };

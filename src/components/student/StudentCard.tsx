@@ -4,9 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StudentAvatar } from "@/components/student/StudentAvatar";
 import {
-  BookOpen,
-  ChevronDown,
-  ChevronUp,
   Trash2,
   Mail,
   Phone,
@@ -14,13 +11,10 @@ import {
   User,
   Clock,
   GraduationCap,
-  MapPin,
-  MoreVertical,
   Edit3,
 } from "lucide-react";
 import { Student } from "@/types";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
-import StudentLayout from "@/app/dashboard/student/layout";
 
 interface StudentCardProps {
   student: Student;
@@ -36,9 +30,6 @@ export function StudentCard({
   student,
   onEdit,
   onDelete,
-  onToggleExpanded,
-  isExpanded,
-  isLoading,
   isCurrentUser,
 }: StudentCardProps) {
   const [isDeleting, setIsDeleting] = useState(false);
@@ -150,20 +141,6 @@ export function StudentCard({
 
               {/* Enhanced Action Buttons */}
               <div className="flex items-center gap-1 flex-shrink-0">
-                {/* Expand/Collapse */}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onToggleExpanded(student.id)}
-                  className="h-9 w-9 p-0 hover:bg-gray-100 rounded-full"
-                >
-                  {isExpanded ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </Button>
-
                 {/* Edit button */}
                 <Button
                   size="sm"
@@ -279,36 +256,6 @@ export function StudentCard({
             </div>
           </div>
         </div>
-
-        {/* Additional Details Section (Expandable) */}
-        {isExpanded && (
-          <div className="mt-4 pt-4 border-t border-gray-100 bg-gray-50/50 rounded-lg p-4 animate-in slide-in-from-top-2 duration-200">
-            <h4 className="font-semibold text-gray-900 text-sm uppercase tracking-wide flex items-center gap-2 mb-3">
-              <MoreVertical className="h-4 w-4 text-primary" />
-              Informations Supplémentaires
-            </h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Additional student information can go here */}
-              <div className="text-sm text-gray-600">
-                <p>
-                  <strong>ID:</strong> {student.id}
-                </p>
-                <p>
-                  <strong>Statut:</strong>{" "}
-                  {student.onboardingCompleted ? "Actif" : "En attente"}
-                </p>
-              </div>
-              <div className="text-sm text-gray-600">
-                <p>
-                  <strong>Créé le:</strong> {formatDate(student.createdAt)}
-                </p>
-                <p>
-                  <strong>Dernière activité:</strong> {getLastActivityText()}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

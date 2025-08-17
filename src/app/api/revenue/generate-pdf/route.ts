@@ -198,12 +198,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Récupérer les informations du tuteur
+    const tutor = await prisma.user.findUnique({
+      where: { id: tutorId },
+      select: { firstName: true, lastName: true },
+    });
+
+    const tutorName = tutor ? `${tutor.firstName} ${tutor.lastName}` : "Tuteur";
+
     // Générer le PDF côté serveur
     const pdf = generateRevenuePDF({
       revenueTotal: totalRevenue,
       lessons: formattedLessons,
       period: { startDate, endDate },
       studentFilter: studentFilterName,
+      tutorName: tutorName,
     });
 
     // Convertir le PDF en base64
@@ -212,7 +221,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       pdfData: pdfBase64,
-      filename: `rapport_revenus_${format(
+      filename: `bilan_financier_${format(
         parseISO(startDate),
         "dd-MM-yyyy"
       )}_${format(parseISO(endDate), "dd-MM-yyyy")}.pdf`,
@@ -266,15 +275,20 @@ function generateRevenuePDF(data: any) {
   const pageWidth = 210;
   const pageHeight = 297;
   const margin = 20;
+  const center = (pageWidth - 2 * margin) / 2;
   const contentWidth = pageWidth - 2 * margin;
+  const font = "inter";
 
   // Optimize by pre-calculating colors
   const primaryColorRGB = [5, 15, 139]; // #050f8b
   const secondaryColorRGB = [223, 181, 41]; // #dfb529
   const textColorRGB = [55, 65, 81]; // #374151
   const lightGrayRGB = [243, 244, 246]; // #f3f4f6
+  const borderColorRGB = [229, 231, 235]; // #e5e7eb
+  const mutedTextRGB = [107, 114, 128]; // #6b7280
 
   let yPosition = margin;
+  let xPos = margin;
 
   // En-tête avec logo/titre
   pdf.setFillColor(primaryColorRGB[0], primaryColorRGB[1], primaryColorRGB[2]);
@@ -282,66 +296,76 @@ function generateRevenuePDF(data: any) {
 
   pdf.setTextColor(255, 255, 255);
   pdf.setFontSize(24);
-  pdf.setFont("helvetica", "bold");
-  pdf.text("TutorApp", margin, 25);
+  pdf.setFont(font, "bold");
+  pdf.text("TutorApp", center, 15);
 
-  pdf.setFontSize(14);
-  pdf.setFont("helvetica", "normal");
-  pdf.text("Rapport financier", margin, 35);
+  pdf.setFontSize(16);
+  pdf.setFont(font, "bold");
+  pdf.text("Bilan financier", center, 30);
 
   yPosition = 50;
 
   // Informations de période
   pdf.setTextColor(textColorRGB[0], textColorRGB[1], textColorRGB[2]);
   pdf.setFontSize(12);
-  pdf.setFont("helvetica", "bold");
-  pdf.text("Période séléctionnée:", margin, yPosition);
+  pdf.setFont(font, "bold");
+  pdf.text("Période séléctionnée: ", margin, yPosition);
 
-  yPosition += 8;
-  pdf.setFont("helvetica", "normal");
+  xPos += 40;
+
+  pdf.setFont(font, "normal");
   pdf.text(
     `Du ${format(parseISO(data.period.startDate), "dd/MM/yyyy", {
       locale: fr,
     })} au ${format(parseISO(data.period.endDate), "dd/MM/yyyy", {
       locale: fr,
     })}`,
-    margin,
+    xPos,
     yPosition
   );
 
   yPosition += 8;
+  pdf.setFont(font, "bold");
+  pdf.text("Rapport généré le: ", margin, yPosition);
+
+  pdf.setFont(font, "normal");
   pdf.text(
-    `Rapport généré le: ${format(new Date(), "dd/MM/yyyy à HH:mm", {
+    `${format(new Date(), "dd/MM/yyyy à HH:mm", {
       locale: fr,
     })}`,
-    margin,
+    xPos,
     yPosition
   );
+
+  yPosition += 8;
+  pdf.setFont(font, "bold");
+  pdf.text(`Tuteur: ${data.tutorName}`, margin, yPosition);
+  pdf.setFont(font, "normal");
 
   // Afficher le filtre étudiant si appliqué
   if (data.studentFilter) {
     yPosition += 8;
-    pdf.setFont("helvetica", "bold");
+    pdf.setFont(font, "bold");
     pdf.text(`Étudiant(s): ${data.studentFilter}`, margin, yPosition);
-    pdf.setFont("helvetica", "normal");
+    pdf.setFont(font, "normal");
   }
 
-  yPosition += 20;
+  yPosition += 25;
 
   // Résumé des revenus
   pdf.setFillColor(lightGrayRGB[0], lightGrayRGB[1], lightGrayRGB[2]);
-  pdf.rect(margin, yPosition - 5, contentWidth, 25, "F");
+  pdf.rect(margin, yPosition - 7, contentWidth, 30, "F");
 
   pdf.setTextColor(primaryColorRGB[0], primaryColorRGB[1], primaryColorRGB[2]);
   pdf.setFontSize(16);
-  pdf.setFont("helvetica", "bold");
+  pdf.setFont(font, "bold");
   pdf.text("Résumé", margin + 5, yPosition);
 
   yPosition += 8;
   pdf.setFontSize(12);
-  pdf.setFont("helvetica", "normal");
+  pdf.setFont(font, "normal");
   pdf.text(
-    `Revenu total: ${formatCurrency(data.revenueTotal)}`,
+    `Coût total: ${formatCurrency(data.revenueTotal)}`,
     margin + 5,
     yPosition
   );
@@ -360,19 +384,20 @@ function generateRevenuePDF(data: any) {
 
   yPosition += 30;
 
-  // Détail des leçons
+  // Détail des leçons avec tableau agrandi
   pdf.setTextColor(primaryColorRGB[0], primaryColorRGB[1], primaryColorRGB[2]);
-  pdf.setFontSize(14);
-  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(16);
+  pdf.setFont(font, "bold");
   pdf.text("Détail des leçons", margin, yPosition);
 
   yPosition += 15;
 
-  // En-têtes du tableau
-  const tableHeaders = ["Date", "Leçon", "Élève", "Durée", "Montant"];
-  const columnWidths = [25, 60, 40, 25, 30];
+  // En-têtes du tableau agrandi
+  const tableHeaders = ["Date", "Leçon", "Élève", "Durée", "Calcul", "Montant"];
+  const columnWidths = [25, 40, 45, 25, 25, 20];
   let xPosition = margin;
 
+  // En-tête du tableau avec fond coloré
   pdf.setFillColor(
     secondaryColorRGB[0],
     secondaryColorRGB[1],
@@ -382,80 +407,254 @@ function generateRevenuePDF(data: any) {
     xPosition,
     yPosition - 5,
     columnWidths.reduce((a, b) => a + b, 0),
-    8,
+    10,
     "F"
   );
 
+  // Ligne de bordure pour l'en-tête
+  pdf.setDrawColor(borderColorRGB[0], borderColorRGB[1], borderColorRGB[2]);
+  pdf.rect(
+    xPosition,
+    yPosition - 5,
+    columnWidths.reduce((a, b) => a + b, 0),
+    10,
+    "S"
+  );
+
   pdf.setTextColor(255, 255, 255);
-  pdf.setFontSize(10);
-  pdf.setFont("helvetica", "bold");
+  pdf.setFontSize(12);
+  pdf.setFont(font, "bold");
 
   tableHeaders.forEach((header, index) => {
-    pdf.text(header, xPosition + 2, yPosition);
-    xPosition += columnWidths[index];
+    const columnCenter =
+      margin +
+      columnWidths.slice(0, index).reduce((a, b) => a + b, 0) +
+      columnWidths[index] / 2;
+    pdf.text(header, columnCenter, yPosition + 2, { align: "center" });
   });
 
-  yPosition += 10;
+  yPosition += 12;
 
-  // Données du tableau
+  // Données du tableau avec calculs détaillés
   pdf.setTextColor(textColorRGB[0], textColorRGB[1], textColorRGB[2]);
-  pdf.setFont("helvetica", "normal");
+  pdf.setFont(font, "normal");
+  pdf.setFontSize(11);
 
   data.lessons.forEach((lesson: any, index: number) => {
-    if (yPosition > pageHeight - 40) {
+    if (yPosition > pageHeight - 50) {
       pdf.addPage();
       yPosition = margin + 10;
     }
 
+    // Fond alterné pour les lignes
     if (index % 2 === 0) {
       pdf.setFillColor(248, 250, 252);
       pdf.rect(
         margin,
         yPosition - 3,
         columnWidths.reduce((a, b) => a + b, 0),
-        8,
+        10,
         "F"
       );
     }
 
-    xPosition = margin;
+    // Bordure de la ligne
+    pdf.setDrawColor(borderColorRGB[0], borderColorRGB[1], borderColorRGB[2]);
+    pdf.rect(
+      margin,
+      yPosition - 3,
+      columnWidths.reduce((a, b) => a + b, 0),
+      10,
+      "S"
+    );
 
+    // Position verticale centrée dans la cellule (milieu de la hauteur de 10mm)
+    const verticalCenter = yPosition + 2;
+
+    // Date
+    const dateColumnCenter = margin + columnWidths[0] / 2;
     pdf.text(
       format(parseISO(lesson.date), "dd/MM/yyyy", { locale: fr }),
-      xPosition + 2,
-      yPosition
+      dateColumnCenter,
+      verticalCenter,
+      { align: "center" }
     );
-    xPosition += columnWidths[0];
 
+    // Ligne verticale après la colonne Date
+    const dateColumnEnd = margin + columnWidths[0];
+    pdf.line(dateColumnEnd, yPosition - 3, dateColumnEnd, yPosition + 7);
+
+    // Titre de la leçon
+    const titleColumnCenter = margin + columnWidths[0] + columnWidths[1] / 2;
     const title =
       lesson.title.length > 25
         ? lesson.title.substring(0, 22) + "..."
         : lesson.title;
-    pdf.text(title, xPosition + 2, yPosition);
-    xPosition += columnWidths[1];
+    pdf.text(title, titleColumnCenter, verticalCenter, { align: "center" });
 
+    // Ligne verticale après la colonne Leçon
+    const titleColumnEnd = margin + columnWidths[0] + columnWidths[1];
+    pdf.line(titleColumnEnd, yPosition - 3, titleColumnEnd, yPosition + 7);
+
+    // Nom de l'étudiant
+    const studentColumnCenter =
+      margin + columnWidths[0] + columnWidths[1] + columnWidths[2] / 2;
     const studentName = `${lesson.student.firstName} ${lesson.student.lastName}`;
-    pdf.text(studentName, xPosition + 2, yPosition);
-    xPosition += columnWidths[2];
+    const shortName =
+      studentName.length > 15
+        ? studentName.substring(0, 12) + "..."
+        : studentName;
+    pdf.text(shortName, studentColumnCenter, verticalCenter, {
+      align: "center",
+    });
 
-    pdf.text(formatDuration(lesson.duration), xPosition + 2, yPosition);
-    xPosition += columnWidths[3];
+    // Ligne verticale après la colonne Élève
+    const studentColumnEnd =
+      margin + columnWidths[0] + columnWidths[1] + columnWidths[2];
+    pdf.line(studentColumnEnd, yPosition - 3, studentColumnEnd, yPosition + 7);
 
-    pdf.text(formatCurrency(lesson.price), xPosition + 2, yPosition);
+    // Durée
+    const durationColumnCenter =
+      margin +
+      columnWidths[0] +
+      columnWidths[1] +
+      columnWidths[2] +
+      columnWidths[3] / 2;
+    pdf.text(
+      formatDuration(lesson.duration),
+      durationColumnCenter,
+      verticalCenter,
+      {
+        align: "center",
+      }
+    );
 
-    yPosition += 8;
+    // Ligne verticale après la colonne Durée
+    const durationColumnEnd =
+      margin +
+      columnWidths[0] +
+      columnWidths[1] +
+      columnWidths[2] +
+      columnWidths[3];
+    pdf.line(
+      durationColumnEnd,
+      yPosition - 3,
+      durationColumnEnd,
+      yPosition + 7
+    );
+
+    // Calcul détaillé
+    const calculationColumnCenter =
+      margin +
+      columnWidths[0] +
+      columnWidths[1] +
+      columnWidths[2] +
+      columnWidths[3] +
+      columnWidths[4] / 2;
+    const durationInHours = parseDurationToHours(lesson.duration);
+    const hourlyRate = durationInHours > 0 ? lesson.price / durationInHours : 0;
+    const calculation = `${durationInHours.toFixed(1)}h × ${hourlyRate.toFixed(
+      0
+    )}€`;
+    pdf.text(calculation, calculationColumnCenter, verticalCenter, {
+      align: "center",
+    });
+
+    // Ligne verticale après la colonne Calcul
+    const calculationColumnEnd =
+      margin +
+      columnWidths[0] +
+      columnWidths[1] +
+      columnWidths[2] +
+      columnWidths[3] +
+      columnWidths[4];
+    pdf.line(
+      calculationColumnEnd,
+      yPosition - 3,
+      calculationColumnEnd,
+      yPosition + 7
+    );
+
+    // Montant
+    const amountColumnCenter =
+      margin +
+      columnWidths[0] +
+      columnWidths[1] +
+      columnWidths[2] +
+      columnWidths[3] +
+      columnWidths[4] +
+      columnWidths[5] / 2;
+    pdf.setTextColor(
+      primaryColorRGB[0],
+      primaryColorRGB[1],
+      primaryColorRGB[2]
+    );
+    pdf.setFont(font, "bold");
+    pdf.text(formatCurrency(lesson.price), amountColumnCenter, verticalCenter, {
+      align: "center",
+    });
+    pdf.setTextColor(textColorRGB[0], textColorRGB[1], textColorRGB[2]);
+    pdf.setFont(font, "normal");
+
+    yPosition += 10;
   });
 
-  // Pied de page
+  // Pied de page professionnel
   const totalPages = (pdf as any).internal.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {
     pdf.setPage(i);
-    pdf.setTextColor(128, 128, 128);
+
+    // Ligne de séparation
+    pdf.setDrawColor(borderColorRGB[0], borderColorRGB[1], borderColorRGB[2]);
+    pdf.line(margin, pageHeight - 35, pageWidth - margin, pageHeight - 35);
+
+    // Informations du pied de page
+    pdf.setTextColor(mutedTextRGB[0], mutedTextRGB[1], mutedTextRGB[2]);
     pdf.setFontSize(8);
-    pdf.setFont("helvetica", "normal");
-    pdf.text(`Page ${i} sur ${totalPages}`, pageWidth / 2, pageHeight - 10, {
+    pdf.setFont(font, "normal");
+
+    // Numéro de page
+    pdf.text(`Page ${i} sur ${totalPages}`, pageWidth / 2, pageHeight - 25, {
       align: "center",
     });
+
+    // Logo en bas à gauche
+    pdf.setTextColor(
+      primaryColorRGB[0],
+      primaryColorRGB[1],
+      primaryColorRGB[2]
+    );
+    pdf.setFontSize(10);
+    pdf.setFont(font, "bold");
+    pdf.text("TutorApp", margin, pageHeight - 25);
+
+    // Date en bas à droite
+    pdf.setTextColor(mutedTextRGB[0], mutedTextRGB[1], mutedTextRGB[2]);
+    pdf.setFontSize(8);
+    pdf.setFont(font, "normal");
+    pdf.text(
+      format(new Date(), "dd/MM/yyyy", { locale: fr }),
+      pageWidth - margin - 25,
+      pageHeight - 25
+    );
+
+    // Informations supplémentaires
+    pdf.setFontSize(7);
+    pdf.text(
+      "Rapport généré automatiquement • Données confidentielles",
+      pageWidth / 2,
+      pageHeight - 18,
+      { align: "center" }
+    );
+
+    // Légende des calculs
+    pdf.setFontSize(7);
+    pdf.text(
+      "Calculs: Durée × Taux horaire = Montant • Taux calculé automatiquement",
+      pageWidth / 2,
+      pageHeight - 12,
+      { align: "center" }
+    );
   }
 
   return pdf;

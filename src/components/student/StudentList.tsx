@@ -23,6 +23,7 @@ import { Users, Plus, Calendar, TrendingUp, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useAuth } from "@/context/AuthContext";
+import { CardVariant } from "@/components/ui/card";
 
 interface StudentListProps {
   tutorId: string;
@@ -58,6 +59,7 @@ export function StudentList({
     data,
     loading: studentsLoading,
     refresh: refetchStudents,
+    invalidateCache,
   } = useDashboardData(dashboardOptions);
 
   const students = data.students || [];
@@ -78,6 +80,8 @@ export function StudentList({
       const { studentsApi } = await import("@/lib/api");
       await studentsApi.delete(id);
       toast.success("Étudiant supprimé avec succès");
+      // Invalidate cache first to ensure fresh data is fetched
+      invalidateCache("students");
       refetchStudents();
     } catch (error) {
       toast.error("Erreur lors de la suppression");
@@ -87,6 +91,8 @@ export function StudentList({
   };
 
   const handleUpdate = (updatedStudent: Student): void => {
+    // Invalidate cache first to ensure fresh data is fetched
+    invalidateCache("students");
     // Refetch students to get updated data
     refetchStudents();
     setIsEditing(false);
@@ -95,6 +101,8 @@ export function StudentList({
   };
 
   const handleStudentAdded = (): void => {
+    // Invalidate cache first to ensure fresh data is fetched
+    invalidateCache("students");
     refetchStudents();
     setIsAddModalOpen(false);
     onStudentAdded?.();
@@ -165,11 +173,10 @@ export function StudentList({
                   Ajouter un étudiant
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border border-gray-200 shadow-xl">
                 <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2">
-                    <UserPlus className="h-5 w-5" />
-                    Ajouter un étudiant
+                  <DialogTitle className="text-xl font-semibold text-[#050f8b]">
+                    Ajouter un nouvel étudiant
                   </DialogTitle>
                 </DialogHeader>
                 <AddStudentForm
@@ -184,37 +191,53 @@ export function StudentList({
 
       {/* Enhanced Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <DataCard
+        <CardVariant
+          variant="default"
           title="Total Étudiants"
-          value={stats.total}
-          icon={Users}
           subtitle="Nombre total d'étudiants"
-          className="border-l-4 border-l-primary"
-        />
+          icon={<Users className="w-8 h-8 text-blue-600" />}
+          actionText=""
+          onClick={() => {}}
+        >
+          <div className="text-3xl font-bold text-gray-900">{stats.total}</div>
+        </CardVariant>
 
-        <DataCard
+        <CardVariant
+          variant="active"
           title="Étudiants Actifs"
-          value={stats.active}
-          icon={TrendingUp}
           subtitle="Avec activité récente"
-          className="border-l-4 border-l-green-500"
-        />
+          icon={<TrendingUp className="w-8 h-8 text-green-600" />}
+          actionText=""
+          onClick={() => {}}
+        >
+          <div className="text-3xl font-bold text-gray-900">{stats.active}</div>
+        </CardVariant>
 
-        <DataCard
+        <CardVariant
+          variant="gradient"
           title="Nouveaux ce mois"
-          value={stats.newThisMonth}
-          icon={Plus}
           subtitle="Nouveaux étudiants"
-          className="border-l-4 border-l-secondary"
-        />
+          icon={<Plus className="w-8 h-8 text-white" />}
+          actionText=""
+          onClick={() => {}}
+        >
+          <div className="text-3xl font-bold text-white">
+            {stats.newThisMonth}
+          </div>
+        </CardVariant>
 
-        <DataCard
+        <CardVariant
+          variant="elevated"
           title="Taux d'activité"
-          value={`${stats.completionRate}%`}
-          icon={Calendar}
           subtitle="Étudiants actifs"
-          className="border-l-4 border-l-blue-500"
-        />
+          icon={<Calendar className="w-8 h-8 text-purple-600" />}
+          actionText=""
+          onClick={() => {}}
+        >
+          <div className="text-3xl font-bold text-gray-900">
+            {stats.completionRate}%
+          </div>
+        </CardVariant>
       </div>
 
       {/* Enhanced Students List Section */}

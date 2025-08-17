@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
   Video,
   GraduationCap,
   Trash2,
+  ScrollText,
 } from "lucide-react";
 import { Course, Lesson } from "@/modules/dashboard/types";
 import { QuickLessonCreationModal } from "./QuickLessonCreationModal";
@@ -114,11 +116,6 @@ export function CourseCard({
   const getCourseSubjects = (course: Course) => {
     const subjects = new Set<string>();
 
-    // Add course subject if it exists
-    if (course.subject) {
-      subjects.add(course.subject);
-    }
-
     // Add lesson subjects if they exist
     course.lessons?.forEach((lesson) => {
       if (lesson.subject) {
@@ -207,16 +204,12 @@ export function CourseCard({
               Actif
             </Badge>
             <Button
-              variant="ghost"
+              variant="outline"
               size="sm"
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="p-1 h-8 w-8"
+              onClick={() => handleViewLessons(course)}
+              className="flex items-center gap-2"
             >
-              {isExpanded ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
+              <BookOpen className="h-4 w-4" />
             </Button>
             <Button
               variant="ghost"
@@ -233,21 +226,21 @@ export function CourseCard({
 
       <CardContent className="pt-0">
         <div className="flex items-center gap-2 mb-4">
+          <Link href={`/dashboard/tutor/courses/${course.id}`}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <ScrollText className="h-4 w-4" />
+              Vos leçons
+            </Button>
+          </Link>
           <Dialog
             open={isLessonViewOpen && selectedCourse?.id === course.id}
             onOpenChange={setIsLessonViewOpen}
           >
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleViewLessons(course)}
-                className="flex items-center gap-2"
-              >
-                <BookOpen className="h-4 w-4" />
-                Détails
-              </Button>
-            </DialogTrigger>
+            <DialogTrigger asChild></DialogTrigger>
             <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle className="flex items-center gap-2">

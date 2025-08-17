@@ -8,7 +8,8 @@ export interface Student {
   email: string;
   grade: string;
   profilePhoto?: string | null;
-  lastActivity?: string | null;
+  lastActivity?: string | Date | null;
+  phoneNumber?: string | null;
   courses: Course[];
   hourlyRate?: number;
 }
@@ -34,6 +35,7 @@ export interface Lesson {
   duration: string;
   zoomLink?: string | null;
   subject?: string | null;
+  tutorComment?: string | null;
   createdAt: string;
   tutorId: string;
   courseId: string;

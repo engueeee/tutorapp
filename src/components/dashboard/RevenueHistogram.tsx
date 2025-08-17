@@ -54,8 +54,12 @@ export const RevenueHistogram = memo(function RevenueHistogram({
         <p className="text-sm text-gray-600">{subtitle}</p>
       </div>
 
-      <div className="h-80">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-64">
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          key={`histogram-${chartData.length}`}
+        >
           <BarChart
             data={chartData}
             margin={{ top: 20, right: 30, left: 20, bottom: 20 }}

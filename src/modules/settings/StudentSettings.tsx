@@ -119,6 +119,9 @@ export function StudentSettings() {
 
       if (response.ok) {
         await refreshUser();
+        // Invalidate cache to ensure fresh data
+        const { invalidateCache } = await import("@/lib/dataManager");
+        invalidateCache("students");
         toast.success("Profil mis à jour avec succès");
       } else {
         toast.error("Erreur lors de la mise à jour du profil");

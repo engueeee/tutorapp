@@ -52,12 +52,13 @@ export function RevenueOverview() {
   const [monthlyGrowthPercentage, setMonthlyGrowthPercentage] = useState(0);
   const [weeklyGrowthPercentage, setWeeklyGrowthPercentage] = useState(0);
 
-  // Memoize the user ID to prevent unnecessary re-fetches
+  // Memoize the user ID and role to prevent unnecessary re-fetches
   const tutorId = useMemo(() => user?.id, [user?.id]);
+  const userRole = useMemo(() => user?.role, [user?.role]);
 
   // Fetch static data (yearly histogram, average rate) - only once
   const fetchStaticData = useCallback(async () => {
-    if (!tutorId || user?.role !== "tutor") return;
+    if (!tutorId || userRole !== "tutor") return;
 
     try {
       // Fetch yearly data for histogram (static - doesn't change with time period)
@@ -114,12 +115,12 @@ export function RevenueOverview() {
     } catch (error) {
       console.error("Error fetching static data:", error);
     }
-  }, [tutorId, user?.role]);
+  }, [tutorId, userRole]);
 
   // Fetch dynamic data (weekly/monthly revenue) - can be refreshed when needed
   const fetchDynamicData = useCallback(
     async (showRefreshing = false) => {
-      if (!tutorId || user?.role !== "tutor") return;
+      if (!tutorId || userRole !== "tutor") return;
 
       if (showRefreshing) {
         setRefreshing(true);
@@ -204,7 +205,7 @@ export function RevenueOverview() {
         }
       }
     },
-    [tutorId, user?.role]
+    [tutorId, userRole]
   );
 
   // Handle manual refresh
@@ -231,6 +232,11 @@ export function RevenueOverview() {
     }),
     [averageRate, lessonsCompleted, projectedRevenue]
   );
+
+  // Memoize chart data to prevent unnecessary re-renders
+  const memoizedMonthlyData = useMemo(() => monthlyData, [monthlyData]);
+  const memoizedWeeklyData = useMemo(() => weeklyData, [weeklyData]);
+  const memoizedYearlyData = useMemo(() => yearlyData, [yearlyData]);
 
   if (loading) {
     return <LoadingUI variant="revenue" />;
@@ -274,15 +280,15 @@ export function RevenueOverview() {
           weeklyRevenue={weeklyRevenue}
           monthlyGrowthPercentage={monthlyGrowthPercentage}
           weeklyGrowthPercentage={weeklyGrowthPercentage}
-          monthlyData={monthlyData}
-          weeklyData={weeklyData}
+          monthlyData={memoizedMonthlyData}
+          weeklyData={memoizedWeeklyData}
           title="Revenu total"
           currency="EUR"
         />
 
         {/* Annual Revenue Chart */}
         <RevenueHistogram
-          data={yearlyData}
+          data={memoizedYearlyData}
           title="Répartition annuelle"
           subtitle="Distribution des revenus par mois sur l'année"
           className="flex-1"

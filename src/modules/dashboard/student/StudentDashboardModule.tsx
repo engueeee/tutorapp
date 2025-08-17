@@ -10,6 +10,7 @@ import { useApi } from "@/hooks/useApi";
 import { Course, Lesson } from "../types";
 import { LessonCard } from "@/components/ui/LessonCard";
 import { TutorInfoCard } from "@/components/ui/TutorInfoCard";
+import { LessonCommentsSection } from "@/components/student/LessonCommentsSection";
 import {
   BookOpen,
   Calendar,
@@ -327,6 +328,9 @@ export function StudentDashboardModule({
           )}
         </CardContent>
       </Card>
+
+      {/* Lesson Comments Section */}
+      <LessonCommentsSection studentId={studentId} />
     </div>
   );
 }

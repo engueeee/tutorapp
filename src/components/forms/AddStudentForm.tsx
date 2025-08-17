@@ -232,13 +232,24 @@ export function AddStudentForm({
         </div>
       </div>
 
-      <Button
-        type="submit"
-        disabled={loading}
-        className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-3"
-      >
-        {loading ? "Enregistrement..." : "Ajouter l'étudiant"}
-      </Button>
+      {/* Form Actions */}
+      <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end pt-4 border-t border-gray-200">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => reset()}
+          className="w-full sm:w-auto"
+        >
+          Réinitialiser
+        </Button>
+        <Button
+          type="submit"
+          disabled={loading}
+          className="w-full sm:w-auto bg-[#050f8b] hover:bg-[#050f8b]/90 text-white font-semibold"
+        >
+          {loading ? "Enregistrement..." : "Ajouter l'étudiant"}
+        </Button>
+      </div>
     </form>
   );
 }

@@ -52,6 +52,7 @@ import {
   CalendarDays,
   Users,
   FileText,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/context/AuthContext";
@@ -270,6 +271,7 @@ export function CalendarComponent({
         boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
         fontSize: "12px",
         fontWeight: "500",
+        cursor: "pointer",
       },
     };
   };
@@ -278,6 +280,11 @@ export function CalendarComponent({
     if (event.type === "lesson" && event.lessonData) {
       setSelectedLesson(event);
       setIsLessonDetailsModalOpen(true);
+    } else {
+      // For non-lesson events, show a simple confirmation dialog
+      if (confirm(`Voulez-vous supprimer l'événement "${event.title}" ?`)) {
+        handleDeleteEvent(event.id);
+      }
     }
   };
 
@@ -342,62 +349,7 @@ export function CalendarComponent({
   const handleImportCalendar = async (file: File) => {
     try {
       const text = await file.text();
-      const lines = text.split("\n");
-      const importedEvents: CalendarEvent[] = [];
-
-      let currentEvent: any = {};
-
-      for (const line of lines) {
-        if (line.startsWith("BEGIN:VEVENT")) {
-          currentEvent = {};
-        } else if (line.startsWith("END:VEVENT")) {
-          if (currentEvent.start && currentEvent.title) {
-            importedEvents.push({
-              id: Date.now().toString() + Math.random(),
-              title: currentEvent.title,
-              start: new Date(currentEvent.start),
-              end: new Date(currentEvent.end || currentEvent.start),
-              description: currentEvent.description,
-              type: "imported" as const,
-              color: "#10b981",
-            });
-          }
-        } else if (line.startsWith("SUMMARY:")) {
-          currentEvent.title = line.substring(8);
-        } else if (line.startsWith("DTSTART:")) {
-          const dateStr = line.substring(8);
-          currentEvent.start = new Date(
-            dateStr.substring(0, 4) +
-              "-" +
-              dateStr.substring(4, 6) +
-              "-" +
-              dateStr.substring(6, 8) +
-              "T" +
-              dateStr.substring(9, 11) +
-              ":" +
-              dateStr.substring(11, 13) +
-              ":" +
-              dateStr.substring(13, 15)
-          );
-        } else if (line.startsWith("DTEND:")) {
-          const dateStr = line.substring(6);
-          currentEvent.end = new Date(
-            dateStr.substring(0, 4) +
-              "-" +
-              dateStr.substring(4, 6) +
-              "-" +
-              dateStr.substring(6, 8) +
-              "T" +
-              dateStr.substring(9, 11) +
-              ":" +
-              dateStr.substring(11, 13) +
-              ":" +
-              dateStr.substring(13, 15)
-          );
-        } else if (line.startsWith("DESCRIPTION:")) {
-          currentEvent.description = line.substring(12);
-        }
-      }
+      const importedEvents = parseICalFile(text);
 
       setEvents((prev) => [...prev, ...importedEvents]);
       setIsImportModalOpen(false);
@@ -410,6 +362,183 @@ export function CalendarComponent({
         description: "Impossible d'importer le fichier.",
       });
     }
+  };
+
+  const handleImportFrenchSchoolCalendar = async (zone: string) => {
+    try {
+      const response = await fetch(
+        `/api/calendar/import-french-school?zone=${zone}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Impossible de télécharger le calendrier");
+      }
+
+      const text = await response.text();
+      const importedEvents = parseICalFile(text);
+
+      setEvents((prev) => [...prev, ...importedEvents]);
+      setIsImportModalOpen(false);
+      toast.success("Calendrier scolaire importé", {
+        description: `${importedEvents.length} événements du calendrier scolaire ont été importés.`,
+      });
+    } catch (error) {
+      console.error("Import error:", error);
+      toast.error("Erreur", {
+        description: "Impossible d'importer le calendrier scolaire.",
+      });
+    }
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    try {
+      // Find the event to get its type
+      const eventToDelete = events.find((event) => event.id === eventId);
+
+      if (!eventToDelete) {
+        throw new Error("Événement non trouvé");
+      }
+
+      // If it's a lesson, we need to delete it from the database
+      if (eventToDelete.type === "lesson" && eventToDelete.lessonData) {
+        const response = await fetch(
+          `/api/lessons/${eventToDelete.lessonData.id}`,
+          {
+            method: "DELETE",
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Impossible de supprimer la leçon");
+        }
+      }
+
+      // Remove from local state
+      setEvents((prev) => prev.filter((event) => event.id !== eventId));
+
+      // Close modal if open
+      if (selectedLesson?.id === eventId) {
+        setIsLessonDetailsModalOpen(false);
+        setSelectedLesson(null);
+      }
+
+      toast.success("Événement supprimé", {
+        description: "L'événement a été supprimé avec succès.",
+      });
+    } catch (error) {
+      console.error("Delete error:", error);
+      toast.error("Erreur", {
+        description: "Impossible de supprimer l'événement.",
+      });
+    }
+  };
+
+  const handleClearAllEvents = () => {
+    if (
+      confirm(
+        "Voulez-vous supprimer tous les événements personnels et importés ? Les leçons ne seront pas affectées."
+      )
+    ) {
+      // Keep only lesson events
+      setEvents((prev) => prev.filter((event) => event.type === "lesson"));
+      toast.success("Événements supprimés", {
+        description:
+          "Tous les événements personnels et importés ont été supprimés.",
+      });
+    }
+  };
+
+  // Enhanced iCal parser function
+  const parseICalFile = (text: string): CalendarEvent[] => {
+    const lines = text.split("\n");
+    const importedEvents: CalendarEvent[] = [];
+    let currentEvent: any = {};
+    let inEvent = false;
+
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+
+      if (line.startsWith("BEGIN:VEVENT")) {
+        currentEvent = {};
+        inEvent = true;
+      } else if (line.startsWith("END:VEVENT")) {
+        if (inEvent && currentEvent.start && currentEvent.title) {
+          importedEvents.push({
+            id: Date.now().toString() + Math.random(),
+            title: currentEvent.title,
+            start: new Date(currentEvent.start),
+            end: new Date(currentEvent.end || currentEvent.start),
+            description: currentEvent.description,
+            type: "imported" as const,
+            color: "#10b981",
+          });
+        }
+        inEvent = false;
+      } else if (inEvent) {
+        if (line.startsWith("SUMMARY:")) {
+          currentEvent.title = line
+            .substring(8)
+            .replace(/\\,/g, ",")
+            .replace(/\\;/g, ";");
+        } else if (line.startsWith("DTSTART")) {
+          const dateStr = parseICalDate(line);
+          if (dateStr) {
+            currentEvent.start = dateStr;
+          }
+        } else if (line.startsWith("DTEND")) {
+          const dateStr = parseICalDate(line);
+          if (dateStr) {
+            currentEvent.end = dateStr;
+          }
+        } else if (line.startsWith("DESCRIPTION:")) {
+          currentEvent.description = line
+            .substring(12)
+            .replace(/\\,/g, ",")
+            .replace(/\\;/g, ";");
+        }
+      }
+    }
+
+    return importedEvents;
+  };
+
+  // Helper function to parse iCal date formats
+  const parseICalDate = (line: string): Date | null => {
+    try {
+      // Handle different iCal date formats
+      if (line.includes("VALUE=DATE:")) {
+        // Date only format (YYYYMMDD)
+        const dateStr = line.split("VALUE=DATE:")[1];
+        const year = dateStr.substring(0, 4);
+        const month = dateStr.substring(4, 6);
+        const day = dateStr.substring(6, 8);
+        return new Date(`${year}-${month}-${day}T00:00:00`);
+      } else if (line.includes(":")) {
+        // DateTime format (YYYYMMDDTHHMMSS or YYYYMMDDTHHMMSSZ)
+        const dateStr = line.split(":")[1];
+        if (dateStr.length >= 8) {
+          const year = dateStr.substring(0, 4);
+          const month = dateStr.substring(4, 6);
+          const day = dateStr.substring(6, 8);
+
+          if (dateStr.length >= 15) {
+            // Has time component
+            const hour = dateStr.substring(9, 11);
+            const minute = dateStr.substring(11, 13);
+            const second = dateStr.substring(13, 15);
+            return new Date(
+              `${year}-${month}-${day}T${hour}:${minute}:${second}`
+            );
+          } else {
+            // Date only
+            return new Date(`${year}-${month}-${day}T00:00:00`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error parsing iCal date:", line, error);
+    }
+    return null;
   };
 
   if (loading) {
@@ -592,7 +721,12 @@ export function CalendarComponent({
                   <DialogHeader>
                     <DialogTitle>Importer un calendrier</DialogTitle>
                   </DialogHeader>
-                  <ImportCalendarForm onSubmit={handleImportCalendar} />
+                  <ImportCalendarForm
+                    onSubmit={handleImportCalendar}
+                    onImportFrenchSchoolCalendar={
+                      handleImportFrenchSchoolCalendar
+                    }
+                  />
                 </DialogContent>
               </Dialog>
 
@@ -603,6 +737,15 @@ export function CalendarComponent({
               >
                 <Download className="h-4 w-4 mr-2" />
                 Exporter
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={handleClearAllEvents}
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Effacer tout
               </Button>
             </div>
           </div>
@@ -762,28 +905,34 @@ export function CalendarComponent({
         </CardHeader>
 
         <CardContent className="p-0">
-          <div className="bg-white">
-            {view === "month" && (
-              <MonthView
-                date={date}
-                events={events}
-                onEventClick={handleEventClick}
-              />
-            )}
-            {view === "week" && (
-              <WeekView
-                date={date}
-                events={events}
-                onEventClick={handleEventClick}
-              />
-            )}
-            {view === "day" && (
-              <DayView
-                date={date}
-                events={events}
-                onEventClick={handleEventClick}
-              />
-            )}
+          <div className="bg-white h-[600px]">
+            <Calendar
+              localizer={localizer}
+              events={events}
+              startAccessor="start"
+              endAccessor="end"
+              style={{ height: "100%" }}
+              views={{
+                month: true,
+                week: true,
+                day: true,
+              }}
+              view={view}
+              onView={(newView) => setView(newView as "month" | "week" | "day")}
+              date={date}
+              onNavigate={(newDate) => setDate(newDate)}
+              onSelectEvent={handleEventClick}
+              eventPropGetter={eventStyleGetter}
+              messages={{
+                next: "Suivant",
+                previous: "Précédent",
+                today: "Aujourd'hui",
+                month: "Mois",
+                week: "Semaine",
+                day: "Jour",
+                noEventsInRange: "Aucun événement dans cette période.",
+              }}
+            />
           </div>
         </CardContent>
       </Card>
@@ -800,6 +949,7 @@ export function CalendarComponent({
               setIsLessonDetailsModalOpen(false);
               setSelectedLesson(null);
             }}
+            onDelete={handleDeleteEvent}
           />
         )}
       </Dialog>
@@ -889,8 +1039,16 @@ function AddEventForm({ onSubmit }: { onSubmit: (data: any) => void }) {
 }
 
 // Import Calendar Form Component
-function ImportCalendarForm({ onSubmit }: { onSubmit: (file: File) => void }) {
+function ImportCalendarForm({
+  onSubmit,
+  onImportFrenchSchoolCalendar,
+}: {
+  onSubmit: (file: File) => void;
+  onImportFrenchSchoolCalendar: (zone: string) => void;
+}) {
   const [file, setFile] = useState<File | null>(null);
+  const [selectedZone, setSelectedZone] = useState<string>("zone-a");
+  const [activeTab, setActiveTab] = useState<"file" | "french">("file");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -899,37 +1057,127 @@ function ImportCalendarForm({ onSubmit }: { onSubmit: (file: File) => void }) {
     }
   };
 
+  const handleFrenchSchoolImport = (e: React.FormEvent) => {
+    e.preventDefault();
+    onImportFrenchSchoolCalendar(selectedZone);
+  };
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-        <input
-          type="file"
-          accept=".ics,.ical"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="hidden"
-          id="calendar-file"
-        />
-        <label htmlFor="calendar-file" className="cursor-pointer">
-          <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-          <p className="text-sm text-gray-600">
-            Cliquez pour sélectionner un fichier .ics
-          </p>
-          <p className="text-xs text-gray-500 mt-1">
-            Formats supportés: Apple Calendar, Google Calendar, Outlook
-          </p>
-        </label>
+    <div className="space-y-4">
+      {/* Tabs */}
+      <div className="flex border-b">
+        <button
+          type="button"
+          onClick={() => setActiveTab("file")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "file"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Fichier .ics
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("french")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === "french"
+              ? "border-blue-500 text-blue-600"
+              : "border-transparent text-gray-500 hover:text-gray-700"
+          }`}
+        >
+          Calendrier scolaire français
+        </button>
       </div>
 
-      {file && (
-        <div className="text-sm text-gray-600">
-          Fichier sélectionné: {file.name}
-        </div>
+      {/* File Import Tab */}
+      {activeTab === "file" && (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+            <input
+              type="file"
+              accept=".ics,.ical"
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="hidden"
+              id="calendar-file"
+            />
+            <label htmlFor="calendar-file" className="cursor-pointer">
+              <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+              <p className="text-sm text-gray-600">
+                Cliquez pour sélectionner un fichier .ics
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                Formats supportés: Apple Calendar, Google Calendar, Outlook
+              </p>
+            </label>
+          </div>
+
+          {file && (
+            <div className="text-sm text-gray-600">
+              Fichier sélectionné: {file.name}
+            </div>
+          )}
+
+          <Button type="submit" disabled={!file} className="w-full">
+            Importer le calendrier
+          </Button>
+        </form>
       )}
 
-      <Button type="submit" disabled={!file} className="w-full">
-        Importer le calendrier
-      </Button>
-    </form>
+      {/* French School Calendar Tab */}
+      {activeTab === "french" && (
+        <form onSubmit={handleFrenchSchoolImport} className="space-y-4">
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-gray-700">
+              Sélectionnez votre zone scolaire
+            </label>
+            <Select value={selectedZone} onValueChange={setSelectedZone}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="zone-a">Zone A</SelectItem>
+                <SelectItem value="zone-b">Zone B</SelectItem>
+                <SelectItem value="zone-c">Zone C</SelectItem>
+                <SelectItem value="corse">Corse</SelectItem>
+                <SelectItem value="guadeloupe">Guadeloupe</SelectItem>
+                <SelectItem value="guyane">Guyane</SelectItem>
+                <SelectItem value="martinique">Martinique</SelectItem>
+                <SelectItem value="mayotte">Mayotte</SelectItem>
+                <SelectItem value="nouvelle-caledonie">
+                  Nouvelle Calédonie
+                </SelectItem>
+                <SelectItem value="polynesie">Polynésie</SelectItem>
+                <SelectItem value="reunion">La Réunion</SelectItem>
+                <SelectItem value="saint-pierre-et-miquelon">
+                  Saint-Pierre-et-Miquelon
+                </SelectItem>
+                <SelectItem value="wallis-et-futuna">
+                  Wallis et Futuna
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <CalendarIcon className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div className="text-sm text-blue-800">
+                <p className="font-medium mb-1">Calendrier scolaire officiel</p>
+                <p className="text-blue-600">
+                  Importez automatiquement les vacances scolaires et jours
+                  fériés de votre zone depuis data.gouv.fr
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Button type="submit" className="w-full">
+            Importer le calendrier scolaire
+          </Button>
+        </form>
+      )}
+    </div>
   );
 }
 
@@ -937,9 +1185,11 @@ function ImportCalendarForm({ onSubmit }: { onSubmit: (file: File) => void }) {
 function LessonDetailsModal({
   lesson,
   onClose,
+  onDelete,
 }: {
   lesson: CalendarEvent;
   onClose: () => void;
+  onDelete: (eventId: string) => void;
 }) {
   if (!lesson.lessonData) return null;
 
@@ -995,525 +1245,153 @@ function LessonDetailsModal({
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Status Badge */}
-          <div className="flex items-center gap-3">
-            <Badge
-              className={`${getStatusColor(
-                lessonData.date
-              )} text-sm font-medium`}
-            >
+          {/* Status Badge and Actions */}
+          <div className="flex items-center justify-between">
+            <Badge className={`${getStatusColor(lessonData.date)}`}>
               {getStatusText(lessonData.date)}
             </Badge>
-            {lessonData.subject && (
-              <Badge variant="outline" className="text-sm">
-                {lessonData.subject}
-              </Badge>
-            )}
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onDelete(lesson.id)}
+              className="flex items-center gap-2"
+            >
+              <Trash2 className="h-4 w-4" />
+              Supprimer
+            </Button>
           </div>
 
-          {/* Course Information */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Cours</h3>
-            <p className="text-gray-900 font-medium">
-              {lessonData.course?.title}
-            </p>
-          </div>
-
-          {/* Date and Time */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">
-              Date et heure
-            </h3>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm">
-                <CalendarIcon className="h-4 w-4 text-gray-500" />
-                <span className="text-gray-900">
-                  {formatDate(lessonData.date)}
-                </span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <Clock className="h-4 w-4 text-gray-500" />
-                <span className="text-gray-900">
-                  {lessonData.startTime} • {lessonData.duration}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Description */}
-          {lessonData.description && (
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Description
-              </h3>
-              <p className="text-gray-600 text-sm leading-relaxed">
-                {lessonData.description}
-              </p>
-            </div>
-          )}
-
-          {/* Students */}
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium text-gray-700">
-              Élèves participants
-            </h3>
-            <div className="space-y-3">
-              {(lessonData.lessonStudents &&
-              lessonData.lessonStudents.length > 0
-                ? lessonData.lessonStudents.map((ls) => ls.student)
-                : [lessonData.student]
-              ).map((student, index) => (
-                <div
-                  key={student.id}
-                  className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3"
-                >
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <span className="text-sm font-medium text-blue-600">
-                      {student.firstName.charAt(0)}
-                      {student.lastName.charAt(0)}
+          {/* Lesson Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">
+                  Informations générales
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">
+                      {formatDate(lessonData.date)}
                     </span>
                   </div>
-                  <div>
-                    <div className="text-sm font-medium text-gray-900">
-                      {student.firstName} {student.lastName}
-                    </div>
-                    {student.grade && (
-                      <div className="text-xs text-gray-500">
-                        Niveau: {student.grade}
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">
+                      {lessonData.startTime} - {lessonData.duration}
+                    </span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-gray-500" />
+                    <span className="text-gray-600">
+                      {lessonData.course.title}
+                    </span>
+                  </div>
+                  {lessonData.subject && (
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-gray-500" />
+                      <span className="text-gray-600">
+                        {lessonData.subject}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
 
-          {/* Actions */}
-          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-            <div className="flex items-center gap-3">
-              {lessonData.zoomLink && (
-                <Button
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
-                  onClick={() => window.open(lessonData.zoomLink, "_blank")}
-                >
-                  <Video className="h-4 w-4 mr-2" />
-                  Rejoindre la session
-                  <ExternalLink className="h-4 w-4 ml-2" />
-                </Button>
+              {lessonData.description && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    Description
+                  </h4>
+                  <p className="text-sm text-gray-600">
+                    {lessonData.description}
+                  </p>
+                </div>
               )}
             </div>
-            <Button variant="outline" onClick={onClose}>
-              Fermer
-            </Button>
+
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium text-gray-900 mb-2">Participants</h4>
+                <div className="space-y-3">
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <User className="h-4 w-4 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-sm">
+                        {lessonData.tutor.firstName} {lessonData.tutor.lastName}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {lessonData.tutor.email}
+                      </p>
+                    </div>
+                  </div>
+
+                  {lessonData.lessonStudents &&
+                  lessonData.lessonStudents.length > 0 ? (
+                    lessonData.lessonStudents.map((ls, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                          <User className="h-4 w-4 text-green-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">
+                            {ls.student.firstName} {ls.student.lastName}
+                          </p>
+                          {ls.student.grade && (
+                            <p className="text-xs text-gray-500">
+                              Niveau: {ls.student.grade}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <User className="h-4 w-4 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">
+                          {lessonData.student.firstName}{" "}
+                          {lessonData.student.lastName}
+                        </p>
+                        {lessonData.student.grade && (
+                          <p className="text-xs text-gray-500">
+                            Niveau: {lessonData.student.grade}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {lessonData.zoomLink && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">
+                    Lien de visioconférence
+                  </h4>
+                  <a
+                    href={lessonData.zoomLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 text-sm"
+                  >
+                    <Video className="h-4 w-4" />
+                    Rejoindre la visioconférence
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// Custom Calendar View Components
-function MonthView({
-  date,
-  events,
-  onEventClick,
-}: {
-  date: Date;
-  events: CalendarEvent[];
-  onEventClick: (event: CalendarEvent) => void;
-}) {
-  const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-  const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-  const startDate = new Date(startOfMonth);
-  startDate.setDate(startDate.getDate() - startOfMonth.getDay());
-
-  const days = [];
-  const currentDate = new Date(startDate);
-
-  while (currentDate <= endOfMonth || currentDate.getDay() !== 0) {
-    days.push(new Date(currentDate));
-    currentDate.setDate(currentDate.getDate() + 1);
-  }
-
-  const today = new Date();
-  const isToday = (date: Date) =>
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear();
-
-  const isCurrentMonth = (date: Date) =>
-    date.getMonth() === endOfMonth.getMonth();
-
-  const getEventsForDate = (date: Date) => {
-    return events.filter((event) => {
-      const eventDate = new Date(event.start);
-      return (
-        eventDate.getDate() === date.getDate() &&
-        eventDate.getMonth() === date.getMonth() &&
-        eventDate.getFullYear() === date.getFullYear()
-      );
-    });
-  };
-
-  const truncateText = (text: string, maxLength: number) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + "...";
-  };
-
-  const formatStudentNames = (studentNames: string, maxLength: number = 15) => {
-    if (!studentNames) return "";
-    if (studentNames.length <= maxLength) return studentNames;
-
-    // If it's a list with commas, take the first name
-    if (studentNames.includes(",")) {
-      const firstStudent = studentNames.split(",")[0].trim();
-      return truncateText(firstStudent, maxLength);
-    }
-
-    return truncateText(studentNames, maxLength);
-  };
-
-  return (
-    <div className="p-4">
-      {/* Day headers */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
-        {["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"].map((day) => (
-          <div
-            key={day}
-            className="p-2 text-center text-sm font-medium text-gray-500"
-          >
-            {day}
-          </div>
-        ))}
-      </div>
-
-      {/* Calendar grid */}
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((day, index) => {
-          const dayEvents = getEventsForDate(day);
-          return (
-            <div
-              key={index}
-              className={`min-h-[120px] p-2 border border-gray-100 hover:bg-gray-50 transition-colors ${
-                !isCurrentMonth(day) ? "bg-gray-50 text-gray-400" : ""
-              }`}
-            >
-              <div
-                className={`text-sm font-medium mb-1 ${
-                  isToday(day)
-                    ? "bg-blue-600 text-white rounded-full w-6 h-6 flex items-center justify-center"
-                    : ""
-                }`}
-              >
-                {day.getDate()}
-              </div>
-
-              <div className="space-y-1">
-                {dayEvents.slice(0, 3).map((event, eventIndex) => (
-                  <div
-                    key={eventIndex}
-                    onClick={() => onEventClick(event)}
-                    className="text-xs p-1 rounded cursor-pointer hover:opacity-80 transition-opacity"
-                    style={{
-                      backgroundColor: event.color || "#050f8b",
-                      color: "white",
-                    }}
-                  >
-                    <div className="font-medium truncate">
-                      {truncateText(event.lessonData?.title || event.title, 20)}
-                    </div>
-                    {event.type === "lesson" && event.studentName && (
-                      <div className="text-xs opacity-75 lowercase truncate">
-                        {formatStudentNames(event.studentName, 12)}
-                      </div>
-                    )}
-                    <div className="text-xs opacity-90">
-                      {event.start.toLocaleTimeString("fr-FR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
-                  </div>
-                ))}
-                {dayEvents.length > 3 && (
-                  <div className="text-xs text-gray-500 text-center">
-                    +{dayEvents.length - 3} autres
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function WeekView({
-  date,
-  events,
-  onEventClick,
-}: {
-  date: Date;
-  events: CalendarEvent[];
-  onEventClick: (event: CalendarEvent) => void;
-}) {
-  const startOfWeek = new Date(date);
-  startOfWeek.setDate(date.getDate() - date.getDay());
-
-  const days = [];
-  for (let i = 0; i < 7; i++) {
-    const day = new Date(startOfWeek);
-    day.setDate(startOfWeek.getDate() + i);
-    days.push(day);
-  }
-
-  const today = new Date();
-  const isToday = (date: Date) =>
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear();
-
-  const getEventsForDate = (date: Date) => {
-    return events.filter((event) => {
-      const eventDate = new Date(event.start);
-      return (
-        eventDate.getDate() === date.getDate() &&
-        eventDate.getMonth() === date.getMonth() &&
-        eventDate.getFullYear() === date.getFullYear()
-      );
-    });
-  };
-
-  const truncateText = (text: string, maxLength: number) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + "...";
-  };
-
-  const formatStudentNames = (studentNames: string, maxLength: number = 20) => {
-    if (!studentNames) return "";
-    if (studentNames.length <= maxLength) return studentNames;
-
-    // If it's a list with commas, take the first name
-    if (studentNames.includes(",")) {
-      const firstStudent = studentNames.split(",")[0].trim();
-      return truncateText(firstStudent, maxLength);
-    }
-
-    return truncateText(studentNames, maxLength);
-  };
-
-  return (
-    <div className="p-4">
-      <div className="grid grid-cols-7 gap-2">
-        {days.map((day, index) => {
-          const dayEvents = getEventsForDate(day);
-          return (
-            <div key={index} className="min-h-[400px]">
-              <div
-                className={`p-2 text-center border-b ${
-                  isToday(day)
-                    ? "bg-blue-50 border-blue-200"
-                    : "border-gray-200"
-                }`}
-              >
-                <div className="text-sm font-medium text-gray-600">
-                  {day.toLocaleDateString("fr-FR", { weekday: "short" })}
-                </div>
-                <div
-                  className={`text-lg font-bold ${
-                    isToday(day) ? "text-blue-600" : "text-gray-900"
-                  }`}
-                >
-                  {day.getDate()}
-                </div>
-              </div>
-
-              <div className="p-2 space-y-2">
-                {dayEvents.map((event, eventIndex) => (
-                  <div
-                    key={eventIndex}
-                    onClick={() => onEventClick(event)}
-                    className="p-2 rounded-lg cursor-pointer hover:shadow-md transition-shadow"
-                    style={{
-                      backgroundColor: event.color || "#050f8b",
-                      color: "white",
-                    }}
-                  >
-                    <div className="font-medium text-sm truncate">
-                      {truncateText(event.lessonData?.title || event.title, 25)}
-                    </div>
-                    {event.type === "lesson" && event.studentName && (
-                      <div className="text-xs opacity-75 lowercase truncate">
-                        {formatStudentNames(event.studentName, 18)}
-                      </div>
-                    )}
-                    <div className="text-xs opacity-90">
-                      {event.start.toLocaleTimeString("fr-FR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}{" "}
-                      -
-                      {event.end.toLocaleTimeString("fr-FR", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-function DayView({
-  date,
-  events,
-  onEventClick,
-}: {
-  date: Date;
-  events: CalendarEvent[];
-  onEventClick: (event: CalendarEvent) => void;
-}) {
-  const today = new Date();
-  const isToday = (date: Date) =>
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear();
-
-  const getEventsForDate = (date: Date) => {
-    return events
-      .filter((event) => {
-        const eventDate = new Date(event.start);
-        return (
-          eventDate.getDate() === date.getDate() &&
-          eventDate.getMonth() === date.getMonth() &&
-          eventDate.getFullYear() === date.getFullYear()
-        );
-      })
-      .sort((a, b) => a.start.getTime() - b.start.getTime());
-  };
-
-  const truncateText = (text: string, maxLength: number) => {
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + "...";
-  };
-
-  const formatStudentNames = (studentNames: string, maxLength: number = 30) => {
-    if (!studentNames) return "";
-    if (studentNames.length <= maxLength) return studentNames;
-
-    // If it's a list with commas, take the first name
-    if (studentNames.includes(",")) {
-      const firstStudent = studentNames.split(",")[0].trim();
-      return truncateText(firstStudent, maxLength);
-    }
-
-    return truncateText(studentNames, maxLength);
-  };
-
-  const dayEvents = getEventsForDate(date);
-
-  return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">
-          {date.toLocaleDateString("fr-FR", {
-            weekday: "long",
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })}
-        </h2>
-        {isToday(date) && (
-          <Badge variant="secondary" className="mt-2">
-            Aujourd'hui
-          </Badge>
-        )}
-      </div>
-
-      {dayEvents.length === 0 ? (
-        <div className="text-center py-12">
-          <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            Aucun événement
-          </h3>
-          <p className="text-gray-500">
-            Aucun événement programmé pour aujourd'hui.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {dayEvents.map((event, index) => (
-            <Card
-              key={index}
-              className="cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => onEventClick(event)}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div
-                        className="w-3 h-3 rounded-full"
-                        style={{ backgroundColor: event.color || "#050f8b" }}
-                      />
-                      <div>
-                        <h3 className="font-semibold text-gray-900 truncate">
-                          {truncateText(
-                            event.lessonData?.title || event.title,
-                            35
-                          )}
-                        </h3>
-                        {event.type === "lesson" && event.studentName && (
-                          <div className="text-xs text-gray-500 lowercase truncate">
-                            {formatStudentNames(event.studentName, 25)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        <span>
-                          {event.start.toLocaleTimeString("fr-FR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}{" "}
-                          -
-                          {event.end.toLocaleTimeString("fr-FR", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </span>
-                      </div>
-                      {event.courseName && (
-                        <div className="flex items-center gap-1">
-                          <BookOpen className="h-4 w-4" />
-                          <span className="truncate">
-                            {truncateText(event.courseName, 20)}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="text-xs">
-                    {event.type === "lesson"
-                      ? "Leçon"
-                      : event.type === "personal"
-                      ? "Personnel"
-                      : "Importé"}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
-    </div>
   );
 }

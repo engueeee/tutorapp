@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useMemo, memo } from "react";
+import { useState, useEffect, useMemo, memo, useCallback } from "react";
 
 interface RevenueCardProps {
   monthlyRevenue: number;
@@ -76,6 +76,10 @@ export const RevenueCard = memo(function RevenueCard({
     [isPositiveGrowth, currentGrowthPercentage, viewMode]
   );
 
+  // Memoize button click handlers
+  const handleWeekClick = useCallback(() => setViewMode("week"), []);
+  const handleMonthClick = useCallback(() => setViewMode("month"), []);
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -101,7 +105,7 @@ export const RevenueCard = memo(function RevenueCard({
           <Button
             variant={viewMode === "week" ? "secondary" : "outline"}
             size="sm"
-            onClick={() => setViewMode("week")}
+            onClick={handleWeekClick}
             className="text-xs h-7 px-2"
           >
             Semaine
@@ -109,7 +113,7 @@ export const RevenueCard = memo(function RevenueCard({
           <Button
             variant={viewMode === "month" ? "secondary" : "outline"}
             size="sm"
-            onClick={() => setViewMode("month")}
+            onClick={handleMonthClick}
             className="text-xs h-7 px-2"
           >
             Mois
@@ -139,8 +143,12 @@ export const RevenueCard = memo(function RevenueCard({
       </div>
 
       {/* Chart */}
-      <div className="h-full">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-64">
+        <ResponsiveContainer
+          width="100%"
+          height="100%"
+          key={`${viewMode}-${currentData.length}`}
+        >
           <LineChart
             data={currentData}
             margin={{ top: 5, right: 5, left: 5, bottom: 20 }}

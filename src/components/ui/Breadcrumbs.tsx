@@ -33,6 +33,15 @@ export function Breadcrumbs() {
           label: "Cours",
           icon: BookOpen,
         });
+
+        // Add course detail breadcrumb if we're on a specific course page
+        if (pathname.match(/\/dashboard\/tutor\/courses\/[^\/]+$/)) {
+          items.push({
+            href: pathname,
+            label: "Détails du cours",
+            icon: BookOpen,
+          });
+        }
       }
 
       if (pathname.startsWith("/dashboard/tutor/calendar")) {

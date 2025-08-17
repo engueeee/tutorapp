@@ -13,7 +13,7 @@ interface StudentAvatarProps {
     firstName: string;
     lastName: string;
     profilePhoto?: string | null;
-    lastActivity?: Date | null;
+    lastActivity?: Date | string | null;
   };
   size?: "sm" | "md" | "lg";
   showStatus?: boolean;
@@ -26,7 +26,14 @@ export function StudentAvatar({
   showStatus = true,
   className = "",
 }: StudentAvatarProps) {
-  const status = calculateStudentStatus(student.lastActivity || null);
+  // Ensure lastActivity is a Date object or null
+  const lastActivity = student.lastActivity
+    ? student.lastActivity instanceof Date
+      ? student.lastActivity
+      : new Date(student.lastActivity)
+    : null;
+
+  const status = calculateStudentStatus(lastActivity);
 
   const sizeClasses = {
     sm: "w-8 h-8",
@@ -84,6 +91,7 @@ export function StudentAvatar({
             className="w-full h-full object-cover"
             style={{ objectPosition: "center" }}
             onError={(e) => {
+              console.error("StudentAvatar - image failed to load:", e);
               // Fallback to initials if image fails to load
               const target = e.target as HTMLImageElement;
               target.style.display = "none";
@@ -94,6 +102,9 @@ export function StudentAvatar({
                 ) as HTMLElement;
                 if (fallback) fallback.style.display = "flex";
               }
+            }}
+            onLoad={() => {
+              console.log("StudentAvatar - image loaded successfully");
             }}
           />
         ) : null}

@@ -180,6 +180,10 @@ export default function StudentDashboardClient() {
               // Refresh user data after onboarding completion
               await refreshUser();
 
+              // Invalidate cache to ensure fresh data
+              const { invalidateCache } = await import("@/lib/dataManager");
+              invalidateCache("students");
+
               // Also refresh student data to get updated onboarding status
               const response = await fetch(`/api/students?userId=${user.id}`);
               if (response.ok) {
