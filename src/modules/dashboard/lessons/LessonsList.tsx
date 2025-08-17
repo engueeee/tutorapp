@@ -229,25 +229,6 @@ export function LessonsList({
     setEditOpen(true);
   };
   // Save edit
-  const handleSaveEdit = (updated: any) => {
-    if (!editLesson) return;
-    import("@/lib/api")
-      .then(({ lessonsApi }) => {
-        return lessonsApi.update(editLesson.id, updated);
-      })
-      .then((updatedLesson) => {
-        setLocalLessons(
-          displayLessons.map((l) =>
-            l.id === editLesson.id ? { ...l, ...updatedLesson } : l
-          ) as any
-        );
-        setEditOpen(false);
-        if (onLessonsChanged) onLessonsChanged();
-      })
-      .catch((error) => {
-        // Handle error silently or show toast
-      });
-  };
   // Delete handler
   const handleDelete = (lessonId: string) => {
     const lesson = displayLessons.find((l) => l.id === lessonId) || null;
@@ -260,11 +241,15 @@ export function LessonsList({
     try {
       const { lessonsApi } = await import("@/lib/api");
       await lessonsApi.delete(deleteLesson.id);
+
+      // Optimistic update - immediately remove from UI
       setLocalLessons(displayLessons.filter((l) => l.id !== deleteLesson.id));
       setDeleteOpen(false);
+
       if (onLessonsChanged) onLessonsChanged();
     } catch (error) {
       // Handle error silently or show toast
+      console.error("Error deleting lesson:", error);
     }
   };
 

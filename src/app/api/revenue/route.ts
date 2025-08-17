@@ -151,6 +151,15 @@ export async function GET(req: NextRequest) {
     orderBy: { date: "asc" },
   });
 
+  // Fetch all students associated with this tutor for average rate calculation
+  const allTutorStudents = await prisma.student.findMany({
+    where: { tutorId },
+    select: {
+      id: true,
+      hourlyRate: true,
+    },
+  });
+
   // Calculate revenue for each lesson with detailed breakdown
   let totalRevenue = 0;
   let lessonsCompleted = 0;
@@ -171,6 +180,13 @@ export async function GET(req: NextRequest) {
       contribution: number;
     }>;
   }> = [];
+
+  // Initialize studentHourlyRates with all tutor's students
+  allTutorStudents.forEach((student) => {
+    if (student.hourlyRate && Number(student.hourlyRate) > 0) {
+      studentHourlyRates[student.id] = Number(student.hourlyRate);
+    }
+  });
 
   for (const lesson of lessons) {
     const isPast = new Date(lesson.date) < now;
@@ -232,34 +248,6 @@ export async function GET(req: NextRequest) {
 
     if (isPast) {
       lessonsCompleted++;
-
-      // Track unique student hourly rates for overall average calculation
-      if (studentId) {
-        // Only track the selected student's rate
-        const selectedStudent = uniqueStudents.find(
-          (student) => student.id === studentId
-        );
-        if (
-          selectedStudent?.id &&
-          selectedStudent?.hourlyRate &&
-          Number(selectedStudent.hourlyRate) > 0
-        ) {
-          studentHourlyRates[selectedStudent.id] = Number(
-            selectedStudent.hourlyRate
-          );
-        }
-      } else {
-        // Track all students' rates
-        uniqueStudents.forEach((student) => {
-          if (
-            student.id &&
-            student.hourlyRate &&
-            Number(student.hourlyRate) > 0
-          ) {
-            studentHourlyRates[student.id] = Number(student.hourlyRate);
-          }
-        });
-      }
     }
 
     // Add lesson details for breakdown

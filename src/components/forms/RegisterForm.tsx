@@ -5,11 +5,9 @@
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { UserRegisterPayload } from "@/types/types";
 
 const registerSchema = z.object({
   firstName: z.string().min(1, "Champ requis"),
@@ -21,12 +19,17 @@ const registerSchema = z.object({
 
 type RegisterFormData = z.infer<typeof registerSchema>;
 
-export function RegisterForm() {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const { setUser, setToken } = useAuth();
-  const router = useRouter();
+interface RegisterFormProps {
+  onRegister?: (data: UserRegisterPayload) => Promise<void>;
+  loading?: boolean;
+  error?: string | null;
+}
 
+export function RegisterForm({
+  onRegister,
+  loading = false,
+  error,
+}: RegisterFormProps) {
   const {
     register,
     handleSubmit,
@@ -34,33 +37,8 @@ export function RegisterForm() {
   } = useForm<RegisterFormData>({ resolver: zodResolver(registerSchema) });
 
   const onSubmit = async (data: RegisterFormData) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      const result = await res.json();
-
-      if (!res.ok) {
-        setError(result.error || "Erreur inconnue");
-        return;
-      }
-
-      const { token, user } = result;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      setUser(user);
-      setToken(token);
-
-      router.push(`/dashboard/${user.role}`);
-    } catch (err) {
-      setError("Erreur lors de l'inscription");
-    } finally {
-      setLoading(false);
+    if (onRegister) {
+      await onRegister(data);
     }
   };
 
@@ -100,28 +78,47 @@ export function RegisterForm() {
       {errors.password && (
         <p className="text-sm text-red-500">{errors.password.message}</p>
       )}
-      <div>
-        <select
-          {...register("role")}
-          className="w-full border rounded px-3 py-2"
-        >
-          <option value="">-- Sélectionner un rôle --</option>
-          <option value="tutor">Tuteur</option>
-          <option value="student">Élève</option>
-        </select>
+
+      <div className="space-y-2">
+        <label className="block text-sm font-medium text-gray-700">Rôle</label>
+        <div className="flex space-x-4">
+          <label className="flex items-center">
+            <input
+              type="radio"
+              value="tutor"
+              {...register("role")}
+              className="mr-2"
+            />
+            Tuteur
+          </label>
+          <label className="flex items-center">
+            <input
+              type="radio"
+              value="student"
+              {...register("role")}
+              className="mr-2"
+            />
+            Étudiant
+          </label>
+        </div>
         {errors.role && (
           <p className="text-sm text-red-500">{errors.role.message}</p>
         )}
       </div>
+
+      {error && (
+        <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-sm text-red-600">{error}</p>
+        </div>
+      )}
+
       <Button
         type="submit"
         disabled={loading}
-        variant="primary"
-        className="w-full min-h-[44px] text-base"
+        className="w-full bg-primary hover:bg-primary/90 text-white"
       >
-        {loading ? "Inscription..." : "S'inscrire"}
+        {loading ? "Inscription en cours..." : "S'inscrire"}
       </Button>
-      {error && <p className="text-sm text-red-500 text-center">{error}</p>}
     </form>
   );
 }

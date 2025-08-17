@@ -11,6 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { LoadingUI } from "@/components/ui/LoadingUI";
 import { LessonCard } from "./LessonCard";
 import { QuickLessonCreationModal } from "@/components/courses/QuickLessonCreationModal";
 import {
@@ -35,35 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
-
-interface Lesson {
-  id: string;
-  title: string;
-  description?: string;
-  date: string;
-  startTime: string;
-  duration: string;
-  zoomLink?: string;
-  subject?: string;
-  student: {
-    id: string;
-    firstName: string;
-    lastName: string;
-    grade: string;
-  };
-  lessonStudents?: {
-    student: {
-      id: string;
-      firstName: string;
-      lastName: string;
-      grade: string;
-    };
-  }[];
-  course: {
-    id: string;
-    title: string;
-  };
-}
+import { Lesson } from "../types";
 
 interface GroupedLessonsListProps {
   lessons: Lesson[];
@@ -72,6 +45,9 @@ interface GroupedLessonsListProps {
   onEditLesson?: (lessonId: string) => void;
   onDeleteLesson?: (lessonId: string) => void;
   onLessonsChanged?: () => void;
+  onLessonDeleted?: (lessonId: string) => void;
+  onLessonUpdated?: (updatedLesson: Lesson) => void;
+  onLessonCreated?: (newLesson: Lesson) => void;
 }
 
 type SortOption = "date" | "time" | "student" | "course";
@@ -84,6 +60,9 @@ export function GroupedLessonsList({
   onEditLesson,
   onDeleteLesson,
   onLessonsChanged,
+  onLessonDeleted,
+  onLessonUpdated,
+  onLessonCreated,
 }: GroupedLessonsListProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<SortOption>("date");
@@ -178,6 +157,18 @@ export function GroupedLessonsList({
         break;
     }
 
+    // Filter out lessons from inactive courses
+    filtered = filtered.filter((lesson) => {
+      const isCourseActive = lesson.course.isActive !== false; // Default to true if not set
+      return isCourseActive;
+    });
+
+    // Filter out lessons from deleted or invalid courses
+    filtered = filtered.filter((lesson) => {
+      // Check if course exists and has valid data
+      return lesson.course && lesson.course.id && lesson.course.title;
+    });
+
     // Sort lessons
     filtered.sort((a, b) => {
       switch (sortBy) {
@@ -234,8 +225,10 @@ export function GroupedLessonsList({
     setQuickCreateOpen(true);
   };
 
-  const handleLessonCreated = () => {
-    if (onLessonsChanged) {
+  const handleLessonCreated = (newLesson?: Lesson) => {
+    if (newLesson && onLessonCreated) {
+      onLessonCreated(newLesson);
+    } else if (onLessonsChanged) {
       onLessonsChanged();
     }
     setQuickCreateOpen(false);
@@ -256,21 +249,21 @@ export function GroupedLessonsList({
       const { lessonsApi } = await import("@/lib/api");
       await lessonsApi.delete(deleteLesson.id);
 
-      // Optimistically update local state
-      setLocalLessons(
-        (prev) =>
-          prev?.filter((lesson) => lesson.id !== deleteLesson.id) ||
-          lessons.filter((lesson) => lesson.id !== deleteLesson.id)
-      );
+      // Optimistic update - immediately remove from UI
+      if (onLessonDeleted) {
+        onLessonDeleted(deleteLesson.id);
+      }
 
       setDeleteOpen(false);
       setDeleteLesson(null);
 
+      // Also trigger the general lessons changed callback for other components
       if (onLessonsChanged) {
         onLessonsChanged();
       }
     } catch (error) {
       // Handle error silently or show toast
+      console.error("Error deleting lesson:", error);
     }
   };
 
@@ -383,81 +376,33 @@ export function GroupedLessonsList({
       </div>
 
       {/* Grouped Lessons */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
-        {loading ? (
-          <>
-            {[1, 2, 3, 4].map((i) => (
-              <Card key={i} className="border-[#dfb529] h-fit animate-pulse">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-5 w-5 bg-gray-200 rounded"></div>
-                      <div className="min-w-0 flex-1">
-                        <div className="h-5 bg-gray-200 rounded mb-2"></div>
-                        <div className="flex items-center gap-2">
-                          <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                          <div className="h-4 w-16 bg-gray-200 rounded"></div>
-                          <div className="h-4 w-4 bg-gray-200 rounded"></div>
-                          <div className="h-4 w-16 bg-gray-200 rounded"></div>
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <div className="h-8 w-8 bg-gray-200 rounded"></div>
-                      <div className="h-8 w-8 bg-gray-200 rounded"></div>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="space-y-2">
-                    {[1, 2, 3].map((j) => (
-                      <div
-                        key={j}
-                        className="p-3 border border-gray-200 rounded-lg"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="min-w-0 flex-1">
-                            <div className="h-4 bg-gray-200 rounded mb-1"></div>
-                            <div className="h-3 bg-gray-200 rounded w-2/3"></div>
-                          </div>
-                          <div className="flex items-center gap-1 ml-2">
-                            <div className="h-6 w-6 bg-gray-200 rounded"></div>
-                            <div className="h-6 w-6 bg-gray-200 rounded"></div>
-                            <div className="h-6 w-6 bg-gray-200 rounded"></div>
-                          </div>
-                        </div>
-                        <div className="h-3 bg-gray-200 rounded w-1/2"></div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </>
-        ) : groupedLessons.length === 0 ? (
-          <Card className="p-8 text-center col-span-full">
-            <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Aucune leçon trouvée
-            </h3>
-            <p className="text-gray-600 mb-4">
-              {searchTerm || filterBy !== "all"
-                ? "Aucune leçon ne correspond à vos critères de recherche."
-                : "Commencez par créer votre première leçon."}
-            </p>
-            <QuickLessonCreationModal
-              tutorId={tutorId}
-              onLessonCreated={handleLessonCreated}
-              trigger={
-                <Button className="bg-[#050f8b] hover:bg-[#050f8b]/90">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Créer une leçon
-                </Button>
-              }
-            />
-          </Card>
-        ) : (
-          groupedLessons.map(({ course, lessons }) => {
+      {loading ? (
+        <LoadingUI variant="lesson-list" />
+      ) : groupedLessons.length === 0 ? (
+        <Card className="p-8 text-center col-span-full">
+          <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Aucune leçon trouvée
+          </h3>
+          <p className="text-gray-600 mb-4">
+            {searchTerm || filterBy !== "all"
+              ? "Aucune leçon ne correspond à vos critères de recherche."
+              : "Commencez par créer votre première leçon."}
+          </p>
+          <QuickLessonCreationModal
+            tutorId={tutorId}
+            onLessonCreated={handleLessonCreated}
+            trigger={
+              <Button className="bg-[#050f8b] hover:bg-[#050f8b]/90">
+                <Plus className="h-4 w-4 mr-2" />
+                Créer une leçon
+              </Button>
+            }
+          />
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-4">
+          {groupedLessons.map(({ course, lessons }) => {
             const isExpanded = expandedCourses.has(course.id);
             const visibleLessons = isExpanded ? lessons : lessons.slice(0, 3);
             const hasMoreLessons = lessons.length > 3;
@@ -508,18 +453,6 @@ export function GroupedLessonsList({
                           </Button>
                         }
                       />
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0"
-                        onClick={() => toggleCourseExpansion(course.id)}
-                      >
-                        {isExpanded ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
-                        )}
-                      </Button>
                     </div>
                   </div>
                 </CardHeader>
@@ -547,7 +480,7 @@ export function GroupedLessonsList({
                                 variant="ghost"
                                 className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700"
                                 onClick={() =>
-                                  window.open(lesson.zoomLink, "_blank")
+                                  window.open(lesson.zoomLink!, "_blank")
                                 }
                                 title="Ouvrir le lien Zoom"
                               >
@@ -576,7 +509,7 @@ export function GroupedLessonsList({
                           variant="ghost"
                           size="sm"
                           onClick={() => toggleCourseExpansion(course.id)}
-                          className="text-[#050f8b] hover:text-[#050f8b]/80 text-xs"
+                          className="text-primary hover:text-primary/80 text-xs"
                         >
                           +{lessons.length - 3} autres
                         </Button>
@@ -598,9 +531,9 @@ export function GroupedLessonsList({
                 </CardContent>
               </Card>
             );
-          })
-        )}
-      </div>
+          })}
+        </div>
+      )}
 
       {/* Delete Dialog */}
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { User, Mail, Phone, Calendar } from "lucide-react";
 
 interface TutorInfo {
@@ -160,22 +161,15 @@ export function TutorInfoCard({ studentId }: TutorInfoCardProps) {
         <div className="flex items-start space-x-4">
           {/* Tutor Avatar */}
           <div className="flex-shrink-0">
-            {tutor.profilePhoto ? (
-              <img
-                src={tutor.profilePhoto}
-                alt={`${tutor.firstName} ${tutor.lastName} profile`}
-                title={`Photo de ${tutor.firstName} ${tutor.lastName}`}
-                className="w-16 h-16 rounded-full object-cover border-2 border-gray-200 hover:border-blue-300 transition-colors cursor-pointer"
-              />
-            ) : (
-              <div
-                className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold text-lg hover:from-blue-600 hover:to-purple-700 transition-colors"
-                title={`${tutor.firstName} ${tutor.lastName}`}
-              >
-                {tutor.firstName.charAt(0)}
-                {tutor.lastName.charAt(0)}
-              </div>
-            )}
+            <Avatar
+              className="w-16 h-16 border-2 border-gray-200 hover:border-blue-300 transition-colors cursor-pointer"
+              src={tutor.profilePhoto}
+              alt={`${tutor.firstName} ${tutor.lastName} profile`}
+              fallback={`${tutor.firstName.charAt(0)}${tutor.lastName.charAt(
+                0
+              )}`}
+              title={`Photo de ${tutor.firstName} ${tutor.lastName}`}
+            />
           </div>
 
           {/* Tutor Information */}

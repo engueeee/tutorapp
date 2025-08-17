@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
+import { useMemo, memo } from "react";
 
 function formatCurrency(value: number) {
   return value.toLocaleString("fr-FR", { style: "currency", currency: "EUR" });
@@ -29,18 +30,22 @@ interface RevenueHistogramProps {
   className?: string;
 }
 
-export function RevenueHistogram({
+export const RevenueHistogram = memo(function RevenueHistogram({
   data,
   title,
   subtitle,
   className = "",
 }: RevenueHistogramProps) {
-  // Data is already aggregated by month from the API, just format it for the chart
-  const chartData = data.map((item) => ({
-    month: item.month,
-    revenue: item.revenue,
-    fullDate: item.fullDate,
-  }));
+  // Memoize chart data to prevent unnecessary recalculations
+  const chartData = useMemo(
+    () =>
+      data.map((item) => ({
+        month: item.month,
+        revenue: item.revenue,
+        fullDate: item.fullDate,
+      })),
+    [data]
+  );
 
   return (
     <Card className={`p-6 bg-white border-[#dfb529] ${className}`}>
@@ -86,4 +91,4 @@ export function RevenueHistogram({
       </div>
     </Card>
   );
-}
+});

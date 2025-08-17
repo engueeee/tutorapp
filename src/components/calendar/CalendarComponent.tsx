@@ -204,25 +204,25 @@ export function CalendarComponent({
           endDate.setMonth(startDate.getMonth());
           endDate.setDate(startDate.getDate());
 
-          // Get student names for display
+          // Get student surnames for display
           const students =
             lesson.lessonStudents && lesson.lessonStudents.length > 0
               ? lesson.lessonStudents.map((ls: any) => ls.student)
               : [lesson.student];
 
-          const studentNames = students
-            .map((student: any) => `${student.firstName} ${student.lastName}`)
+          const studentSurnames = students
+            .map((student: any) => student.firstName.toUpperCase())
             .join(", ");
 
           return {
             id: lesson.id,
-            title: studentNames, // Show only student names
+            title: lesson.title || lesson.course?.title || "Leçon", // Show lesson name
             start: startDate,
             end: endDate,
             description: lesson.description,
             type: "lesson" as const,
             courseName: lesson.course?.title,
-            studentName: studentNames,
+            studentName: studentSurnames, // Store surnames for display
             tutorName: lesson.tutor?.firstName + " " + lesson.tutor?.lastName,
             zoomLink: lesson.zoomLink,
             subject: lesson.subject,
@@ -414,8 +414,112 @@ export function CalendarComponent({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="space-y-6">
+        {/* Header skeleton */}
+        <Card className="border-0 shadow-lg bg-gradient-to-r from-gray-100 to-gray-200">
+          <CardHeader className="pb-4">
+            <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gray-300 rounded-lg animate-pulse">
+                  <div className="h-6 w-6 bg-gray-400 rounded"></div>
+                </div>
+                <div>
+                  <div className="h-8 bg-gray-300 rounded w-32 animate-pulse mb-2"></div>
+                  <div className="h-4 bg-gray-300 rounded w-48 animate-pulse"></div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <div className="h-10 bg-gray-300 rounded w-32 animate-pulse"></div>
+                <div className="h-10 bg-gray-300 rounded w-40 animate-pulse"></div>
+                <div className="h-10 bg-gray-300 rounded w-24 animate-pulse"></div>
+                <div className="h-10 bg-gray-300 rounded w-24 animate-pulse"></div>
+              </div>
+            </div>
+          </CardHeader>
+        </Card>
+
+        {/* Stats Cards skeleton */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <Card key={i} className="border-0 shadow-md">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-gray-200 rounded-lg animate-pulse">
+                    <div className="h-5 w-5 bg-gray-300 rounded"></div>
+                  </div>
+                  <div>
+                    <div className="h-4 bg-gray-200 rounded w-24 animate-pulse mb-1"></div>
+                    <div className="h-6 bg-gray-200 rounded w-12 animate-pulse"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* Legend skeleton */}
+        <Card className="border-0 shadow-md">
+          <CardContent className="p-4">
+            <div className="flex flex-wrap gap-6">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <div className="w-4 h-4 rounded bg-gray-200 animate-pulse"></div>
+                  <div className="h-4 bg-gray-200 rounded w-16 animate-pulse"></div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Calendar skeleton */}
+        <Card className="border-0 shadow-lg overflow-hidden">
+          <CardHeader className="bg-gradient-to-r from-gray-50 to-gray-100 border-b">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+                <div className="text-center">
+                  <div className="h-6 bg-gray-200 rounded w-32 animate-pulse mb-1"></div>
+                  <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
+                </div>
+                <div className="h-8 w-8 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="h-8 bg-gray-200 rounded w-20 animate-pulse"></div>
+                <div className="h-8 bg-gray-200 rounded w-24 animate-pulse"></div>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="p-4">
+              {/* Calendar grid skeleton */}
+              <div className="grid grid-cols-7 gap-1 mb-2">
+                {Array.from({ length: 7 }).map((_, i) => (
+                  <div key={i} className="p-2 text-center">
+                    <div className="h-4 bg-gray-200 rounded w-8 mx-auto animate-pulse"></div>
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {Array.from({ length: 42 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="min-h-[120px] p-2 border border-gray-100"
+                  >
+                    <div className="h-4 bg-gray-200 rounded w-6 mb-2 animate-pulse"></div>
+                    <div className="space-y-1">
+                      {Array.from({ length: 3 }).map((_, j) => (
+                        <div
+                          key={j}
+                          className="h-6 bg-gray-200 rounded animate-pulse"
+                        ></div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -423,7 +527,7 @@ export function CalendarComponent({
   return (
     <div className="space-y-6">
       {/* Header with gradient background */}
-      <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 text-white">
+      <Card className="border-0 shadow-lg bg-gradient-to-r from-primary to-primary-400 text-white">
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
             <div className="flex items-center gap-3">
@@ -567,15 +671,15 @@ export function CalendarComponent({
         <CardContent className="p-4">
           <div className="flex flex-wrap gap-6 text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-[#050f8b] shadow-sm"></div>
+              <div className="w-4 h-4 rounded bg-primary shadow-sm"></div>
               <span className="font-medium">Leçons</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-[#dfb529] shadow-sm"></div>
+              <div className="w-4 h-4 rounded bg-secondary shadow-sm"></div>
               <span className="font-medium">Personnel</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded bg-[#10b981] shadow-sm"></div>
+              <div className="w-4 h-4 rounded bg-green-500 shadow-sm"></div>
               <span className="font-medium">Importé</span>
             </div>
           </div>
@@ -699,28 +803,6 @@ export function CalendarComponent({
           />
         )}
       </Dialog>
-    </div>
-  );
-}
-
-// Custom event component to show more details
-function CustomEventComponent({ event }: { event: CalendarEvent }) {
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString("fr-FR", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  return (
-    <div className="p-1">
-      <div className="font-medium text-xs">{event.title}</div>
-      {event.courseName && (
-        <div className="text-xs opacity-75">{event.courseName}</div>
-      )}
-      <div className="text-xs opacity-75">
-        {formatTime(event.start)} - {formatTime(event.end)}
-      </div>
     </div>
   );
 }
@@ -859,33 +941,172 @@ function LessonDetailsModal({
   lesson: CalendarEvent;
   onClose: () => void;
 }) {
+  if (!lesson.lessonData) return null;
+
+  const lessonData = lesson.lessonData;
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("fr-FR", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const getStatusColor = (dateString: string) => {
+    const lessonDate = new Date(dateString);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const lessonDay = new Date(
+      lessonDate.getFullYear(),
+      lessonDate.getMonth(),
+      lessonDate.getDate()
+    );
+
+    if (lessonDay < today) return "bg-gray-100 text-gray-600"; // Past
+    if (lessonDay.getTime() === today.getTime())
+      return "bg-blue-100 text-blue-700"; // Today
+    return "bg-green-100 text-green-700"; // Future
+  };
+
+  const getStatusText = (dateString: string) => {
+    const lessonDate = new Date(dateString);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const lessonDay = new Date(
+      lessonDate.getFullYear(),
+      lessonDate.getMonth(),
+      lessonDate.getDate()
+    );
+
+    if (lessonDay < today) return "Terminé";
+    if (lessonDay.getTime() === today.getTime()) return "Aujourd'hui";
+    return "À venir";
+  };
+
   return (
     <Dialog open={!!lesson} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>
-            <VisuallyHidden>Détails de la leçon</VisuallyHidden>
+          <DialogTitle className="text-xl font-semibold text-gray-900">
+            {lessonData.title}
           </DialogTitle>
         </DialogHeader>
-        {lesson.lessonData && (
-          <LessonCard
-            lesson={{
-              ...lesson.lessonData,
-              student: {
-                ...lesson.lessonData.student,
-                grade: lesson.lessonData.student.grade ?? "",
-              },
-              lessonStudents: lesson.lessonData.lessonStudents
-                ? lesson.lessonData.lessonStudents.map((ls) => ({
-                    student: {
-                      ...ls.student,
-                      grade: ls.student.grade ?? "",
-                    },
-                  }))
-                : undefined,
-            }}
-          />
-        )}
+
+        <div className="space-y-6">
+          {/* Status Badge */}
+          <div className="flex items-center gap-3">
+            <Badge
+              className={`${getStatusColor(
+                lessonData.date
+              )} text-sm font-medium`}
+            >
+              {getStatusText(lessonData.date)}
+            </Badge>
+            {lessonData.subject && (
+              <Badge variant="outline" className="text-sm">
+                {lessonData.subject}
+              </Badge>
+            )}
+          </div>
+
+          {/* Course Information */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">Cours</h3>
+            <p className="text-gray-900 font-medium">
+              {lessonData.course?.title}
+            </p>
+          </div>
+
+          {/* Date and Time */}
+          <div className="bg-gray-50 rounded-lg p-4">
+            <h3 className="text-sm font-medium text-gray-700 mb-2">
+              Date et heure
+            </h3>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm">
+                <CalendarIcon className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-900">
+                  {formatDate(lessonData.date)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-gray-500" />
+                <span className="text-gray-900">
+                  {lessonData.startTime} • {lessonData.duration}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Description */}
+          {lessonData.description && (
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Description
+              </h3>
+              <p className="text-gray-600 text-sm leading-relaxed">
+                {lessonData.description}
+              </p>
+            </div>
+          )}
+
+          {/* Students */}
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium text-gray-700">
+              Élèves participants
+            </h3>
+            <div className="space-y-3">
+              {(lessonData.lessonStudents &&
+              lessonData.lessonStudents.length > 0
+                ? lessonData.lessonStudents.map((ls) => ls.student)
+                : [lessonData.student]
+              ).map((student, index) => (
+                <div
+                  key={student.id}
+                  className="flex items-center gap-3 bg-gray-50 rounded-lg px-4 py-3"
+                >
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                    <span className="text-sm font-medium text-blue-600">
+                      {student.firstName.charAt(0)}
+                      {student.lastName.charAt(0)}
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {student.firstName} {student.lastName}
+                    </div>
+                    {student.grade && (
+                      <div className="text-xs text-gray-500">
+                        Niveau: {student.grade}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-between pt-4 border-t border-gray-200">
+            <div className="flex items-center gap-3">
+              {lessonData.zoomLink && (
+                <Button
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => window.open(lessonData.zoomLink, "_blank")}
+                >
+                  <Video className="h-4 w-4 mr-2" />
+                  Rejoindre la session
+                  <ExternalLink className="h-4 w-4 ml-2" />
+                </Button>
+              )}
+            </div>
+            <Button variant="outline" onClick={onClose}>
+              Fermer
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -934,6 +1155,24 @@ function MonthView({
     });
   };
 
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
+
+  const formatStudentNames = (studentNames: string, maxLength: number = 15) => {
+    if (!studentNames) return "";
+    if (studentNames.length <= maxLength) return studentNames;
+
+    // If it's a list with commas, take the first name
+    if (studentNames.includes(",")) {
+      const firstStudent = studentNames.split(",")[0].trim();
+      return truncateText(firstStudent, maxLength);
+    }
+
+    return truncateText(studentNames, maxLength);
+  };
+
   return (
     <div className="p-4">
       {/* Day headers */}
@@ -980,7 +1219,14 @@ function MonthView({
                       color: "white",
                     }}
                   >
-                    <div className="font-medium truncate">{event.title}</div>
+                    <div className="font-medium truncate">
+                      {truncateText(event.lessonData?.title || event.title, 20)}
+                    </div>
+                    {event.type === "lesson" && event.studentName && (
+                      <div className="text-xs opacity-75 lowercase truncate">
+                        {formatStudentNames(event.studentName, 12)}
+                      </div>
+                    )}
                     <div className="text-xs opacity-90">
                       {event.start.toLocaleTimeString("fr-FR", {
                         hour: "2-digit",
@@ -1039,6 +1285,24 @@ function WeekView({
     });
   };
 
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
+
+  const formatStudentNames = (studentNames: string, maxLength: number = 20) => {
+    if (!studentNames) return "";
+    if (studentNames.length <= maxLength) return studentNames;
+
+    // If it's a list with commas, take the first name
+    if (studentNames.includes(",")) {
+      const firstStudent = studentNames.split(",")[0].trim();
+      return truncateText(firstStudent, maxLength);
+    }
+
+    return truncateText(studentNames, maxLength);
+  };
+
   return (
     <div className="p-4">
       <div className="grid grid-cols-7 gap-2">
@@ -1076,7 +1340,14 @@ function WeekView({
                       color: "white",
                     }}
                   >
-                    <div className="font-medium text-sm">{event.title}</div>
+                    <div className="font-medium text-sm truncate">
+                      {truncateText(event.lessonData?.title || event.title, 25)}
+                    </div>
+                    {event.type === "lesson" && event.studentName && (
+                      <div className="text-xs opacity-75 lowercase truncate">
+                        {formatStudentNames(event.studentName, 18)}
+                      </div>
+                    )}
                     <div className="text-xs opacity-90">
                       {event.start.toLocaleTimeString("fr-FR", {
                         hour: "2-digit",
@@ -1127,6 +1398,24 @@ function DayView({
       .sort((a, b) => a.start.getTime() - b.start.getTime());
   };
 
+  const truncateText = (text: string, maxLength: number) => {
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + "...";
+  };
+
+  const formatStudentNames = (studentNames: string, maxLength: number = 30) => {
+    if (!studentNames) return "";
+    if (studentNames.length <= maxLength) return studentNames;
+
+    // If it's a list with commas, take the first name
+    if (studentNames.includes(",")) {
+      const firstStudent = studentNames.split(",")[0].trim();
+      return truncateText(firstStudent, maxLength);
+    }
+
+    return truncateText(studentNames, maxLength);
+  };
+
   const dayEvents = getEventsForDate(date);
 
   return (
@@ -1173,9 +1462,19 @@ function DayView({
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: event.color || "#050f8b" }}
                       />
-                      <h3 className="font-semibold text-gray-900">
-                        {event.title}
-                      </h3>
+                      <div>
+                        <h3 className="font-semibold text-gray-900 truncate">
+                          {truncateText(
+                            event.lessonData?.title || event.title,
+                            35
+                          )}
+                        </h3>
+                        {event.type === "lesson" && event.studentName && (
+                          <div className="text-xs text-gray-500 lowercase truncate">
+                            {formatStudentNames(event.studentName, 25)}
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-600">
                       <div className="flex items-center gap-1">
@@ -1195,7 +1494,9 @@ function DayView({
                       {event.courseName && (
                         <div className="flex items-center gap-1">
                           <BookOpen className="h-4 w-4" />
-                          <span>{event.courseName}</span>
+                          <span className="truncate">
+                            {truncateText(event.courseName, 20)}
+                          </span>
                         </div>
                       )}
                     </div>

@@ -8,6 +8,10 @@ export interface User {
   phoneNumber?: string;
   profilePhoto?: string;
   onboardingCompleted: boolean;
+  bio?: string;
+  subjects?: string[];
+  experience?: string;
+  education?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -97,6 +101,7 @@ export interface StudentForm {
 export interface CourseForm {
   title: string;
   description?: string;
+  zoomLink?: string;
 }
 
 export interface LessonForm {

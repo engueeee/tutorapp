@@ -7,13 +7,22 @@ import { toast } from "sonner";
 
 export function LogoutButton() {
   const { logout } = useAuth();
+  const router = useRouter();
 
-  const handleLogout = () => {
-    // Clear auth data
-    logout();
+  const handleLogout = async () => {
+    try {
+      // Clear auth data
+      logout();
 
-    // Use window.location to bypass router and RoleGuard
-    window.location.href = "/";
+      // Show success message
+      toast.success("Déconnexion réussie");
+
+      // Force a hard redirect to the home page to ensure complete cleanup
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Erreur lors de la déconnexion");
+    }
   };
 
   return (

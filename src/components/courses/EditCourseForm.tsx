@@ -20,45 +20,57 @@ export function EditCourseForm({
 }: EditCourseFormProps) {
   const [title, setTitle] = useState(course.title);
   const [description, setDescription] = useState(course.description || "");
+  const [zoomLink, setZoomLink] = useState(course.zoomLink || "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     onSave({
       title,
       description: description || undefined,
+      zoomLink: zoomLink || undefined,
     });
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="title">Course Title</Label>
+        <Label htmlFor="title">Titre du cours</Label>
         <Input
           id="title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="Enter course title"
+          placeholder="Ex: Mathématiques niveau 1"
           required
         />
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="description">Description (Optional)</Label>
+        <Label htmlFor="description">Description (optionnel)</Label>
         <Textarea
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Enter course description"
+          placeholder="Description du cours..."
           rows={3}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="zoomLink">Lien Zoom (optionnel)</Label>
+        <Input
+          id="zoomLink"
+          value={zoomLink}
+          onChange={(e) => setZoomLink(e.target.value)}
+          placeholder="https://zoom.us/j/..."
         />
       </div>
 
       <div className="flex justify-end gap-2 pt-4">
         <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
+          Annuler
         </Button>
-        <Button type="submit" variant="primary">
-          Save Changes
+        <Button type="submit" className="bg-[#050f8b] hover:bg-[#050f8b]/90">
+          Enregistrer
         </Button>
       </div>
     </form>

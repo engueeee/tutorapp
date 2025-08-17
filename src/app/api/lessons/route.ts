@@ -25,23 +25,56 @@ export async function GET(req: NextRequest) {
     const tutorId = searchParams.get("tutorId");
     const courseId = searchParams.get("courseId");
     const studentId = searchParams.get("studentId");
+    const limit = searchParams.get("limit");
 
     if (lessonId) {
       const lesson = await prisma.lesson.findUnique({
         where: { id: String(lessonId) },
         include: {
-          student: true,
+          student: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
           lessonStudents: {
             include: {
-              student: true,
+              student: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                },
+              },
             },
           },
           course: {
             include: {
-              courseStudents: { include: { student: true } },
+              courseStudents: {
+                include: {
+                  student: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                    },
+                  },
+                },
+              },
             },
           },
-          tutor: true,
+          tutor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
         },
       });
       return NextResponse.json(lesson);
@@ -54,6 +87,60 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    // Build the base query
+    const baseQuery = {
+      include: {
+        student: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+        lessonStudents: {
+          include: {
+            student: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+              },
+            },
+          },
+        },
+        course: {
+          select: {
+            id: true,
+            title: true,
+            description: true,
+            courseStudents: {
+              include: {
+                student: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        tutor: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: [{ date: "asc" }, { startTime: "asc" }] as const,
+    };
+
     let lessons: any[] = [];
 
     if (tutorId) {
@@ -61,51 +148,24 @@ export async function GET(req: NextRequest) {
         where: {
           tutorId: tutorId,
         },
-        include: {
-          student: true,
-          lessonStudents: {
-            include: {
-              student: true,
-            },
-          },
-          course: true,
-          tutor: true,
-        },
-        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+        ...baseQuery,
+        ...(limit && { take: parseInt(limit) }),
       });
     } else if (courseId) {
       lessons = await prisma.lesson.findMany({
         where: {
           courseId: courseId,
         },
-        include: {
-          student: true,
-          lessonStudents: {
-            include: {
-              student: true,
-            },
-          },
-          course: true,
-          tutor: true,
-        },
-        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+        ...baseQuery,
+        ...(limit && { take: parseInt(limit) }),
       });
     } else if (studentId) {
       lessons = await prisma.lesson.findMany({
         where: {
           studentId: studentId,
         },
-        include: {
-          student: true,
-          lessonStudents: {
-            include: {
-              student: true,
-            },
-          },
-          course: true,
-          tutor: true,
-        },
-        orderBy: [{ date: "asc" }, { startTime: "asc" }],
+        ...baseQuery,
+        ...(limit && { take: parseInt(limit) }),
       });
     }
 

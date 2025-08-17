@@ -1,8 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { LoadingUI } from "@/components/ui/LoadingUI";
 
 interface RoleGuardProps {
   children: React.ReactNode;
@@ -20,11 +21,34 @@ export function RoleGuard({
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  console.log("RoleGuard Debug:", {
+    user,
+    allowedRoles,
+    isAuthorized,
+    isLoading,
+    userRole: user?.role,
+    hasUser: !!user,
+  });
+
   useEffect(() => {
+    // Check if we're on the client side
+    if (typeof window === "undefined") return;
+
+    // If user is null (logged out), redirect to login immediately
     if (!user) {
-      // User not logged in, redirect to login
-      router.replace("/login");
-      return;
+      const storedUser = localStorage.getItem("user");
+      const storedToken = localStorage.getItem("token");
+
+      if (storedUser && storedToken) {
+        // We have auth data in localStorage, wait a bit for context to load
+        console.log("Auth data found in localStorage, waiting for context...");
+        return;
+      } else {
+        // No auth data at all, redirect to login
+        console.log("No auth data found, redirecting to login");
+        router.replace("/login");
+        return;
+      }
     }
 
     if (!allowedRoles.includes(user.role)) {
@@ -44,12 +68,42 @@ export function RoleGuard({
     setIsLoading(false);
   }, [user, allowedRoles, router, redirectTo]);
 
+  // Add a timeout to handle cases where context takes too long to load
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const timeout = setTimeout(() => {
+      if (isLoading && !user) {
+        const storedUser = localStorage.getItem("user");
+        const storedToken = localStorage.getItem("token");
+
+        if (storedUser && storedToken) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            if (allowedRoles.includes(parsedUser.role)) {
+              console.log("Using localStorage data after timeout");
+              setIsAuthorized(true);
+              setIsLoading(false);
+            } else {
+              console.log("User role not allowed, redirecting");
+              router.replace("/login");
+            }
+          } catch (error) {
+            console.error("Error parsing stored user:", error);
+            router.replace("/login");
+          }
+        } else {
+          console.log("No auth data after timeout, redirecting to login");
+          router.replace("/login");
+        }
+      }
+    }, 2000); // Wait 2 seconds for context to load
+
+    return () => clearTimeout(timeout);
+  }, [isLoading, user, allowedRoles, router]);
+
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
-    );
+    return <LoadingUI variant="page" />;
   }
 
   if (!isAuthorized) {

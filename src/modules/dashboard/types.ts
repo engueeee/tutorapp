@@ -17,10 +17,12 @@ export interface Course {
   id: string;
   title: string;
   description?: string | null;
+  zoomLink?: string | null;
   tutorId: string;
   students: Student[];
   lessons: Lesson[];
   createdAt: string;
+  isActive?: boolean;
 }
 
 export interface Lesson {

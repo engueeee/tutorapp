@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    return NextResponse.json(student, { status: 201 });
+    return NextResponse.json({ student }, { status: 201 });
   } catch (err) {
     return NextResponse.json(
       { error: "Failed to create student" },

@@ -8,6 +8,7 @@ import { z } from "zod";
 const CreateCourseSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
+  zoomLink: z.string().optional(),
   tutorId: z.string().min(1, "Tutor ID is required"),
   studentIds: z.array(z.string()).min(1, "At least one student is required"),
 });
@@ -83,35 +84,37 @@ export async function GET(req: NextRequest) {
     let courses: any[] = [];
 
     if (tutorId) {
-      // Try a very basic query first
-      try {
-        courses = await prisma.course.findMany({
-          where: {
-            tutorId: String(tutorId).trim(),
-          },
-          include: {
-            tutor: true,
-          },
-          orderBy: { createdAt: "desc" },
-        });
-
-        // If includeLessons is true, fetch lessons separately
-        if (includeLessons && courses.length > 0) {
-          const courseIds = courses.map((c) => c.id);
-          const lessons = await prisma.lesson.findMany({
-            where: {
-              courseId: { in: courseIds },
+      // Optimized query: fetch courses with minimal includes first
+      const baseCourses = await prisma.course.findMany({
+        where: {
+          tutorId: String(tutorId).trim(),
+        },
+        include: {
+          tutor: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+              profilePhoto: true,
             },
-            include: {
-              student: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  email: true,
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+
+      // Only fetch additional data if requested
+      if (includeLessons || includeStudents) {
+        const courseIds = baseCourses.map((c) => c.id);
+
+        // Parallel queries for better performance
+        const [lessons, courseStudents] = await Promise.all([
+          includeLessons
+            ? prisma.lesson.findMany({
+                where: {
+                  courseId: { in: courseIds },
                 },
-              },
-              lessonStudents: {
                 include: {
                   student: {
                     select: {
@@ -121,58 +124,63 @@ export async function GET(req: NextRequest) {
                       email: true,
                     },
                   },
+                  lessonStudents: {
+                    include: {
+                      student: {
+                        select: {
+                          id: true,
+                          firstName: true,
+                          lastName: true,
+                          email: true,
+                        },
+                      },
+                    },
+                  },
                 },
-              },
-            },
-          });
-
-          // Attach lessons to courses
-          courses = courses.map((course) => ({
-            ...course,
-            lessons: lessons.filter((lesson) => lesson.courseId === course.id),
-          }));
-        }
-
-        // If includeStudents is true, fetch students separately
-        if (includeStudents && courses.length > 0) {
-          const courseIds = courses.map((c) => c.id);
-          const courseStudents = await prisma.courseStudent.findMany({
-            where: {
-              courseId: { in: courseIds },
-            },
-            include: {
-              student: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  email: true,
-                  age: true,
-                  contact: true,
-                  grade: true,
-                  phoneNumber: true,
-                  profilePhoto: true,
-                  lastActivity: true,
-                  onboardingCompleted: true,
-                  hourlyRate: true,
-                  createdAt: true,
-                  tutorId: true,
-                  userId: true,
+              })
+            : [],
+          includeStudents
+            ? prisma.courseStudent.findMany({
+                where: {
+                  courseId: { in: courseIds },
                 },
-              },
-            },
-          });
+                include: {
+                  student: {
+                    select: {
+                      id: true,
+                      firstName: true,
+                      lastName: true,
+                      email: true,
+                      age: true,
+                      contact: true,
+                      grade: true,
+                      phoneNumber: true,
+                      profilePhoto: true,
+                      lastActivity: true,
+                      onboardingCompleted: true,
+                      hourlyRate: true,
+                      createdAt: true,
+                      tutorId: true,
+                      userId: true,
+                    },
+                  },
+                },
+              })
+            : [],
+        ]);
 
-          // Attach students to courses
-          courses = courses.map((course) => ({
-            ...course,
-            courseStudents: courseStudents.filter(
-              (cs) => cs.courseId === course.id
-            ),
-          }));
-        }
-      } catch (error) {
-        courses = [];
+        // Attach data to courses
+        courses = baseCourses.map((course) => ({
+          ...course,
+          lessons: includeLessons
+            ? lessons.filter((lesson) => lesson.courseId === course.id)
+            : [],
+          courseStudents: includeStudents
+            ? courseStudents.filter((cs) => cs.courseId === course.id)
+            : [],
+        }));
+      } else {
+        courses = baseCourses;
       }
     } else if (courseId) {
       const course = await prisma.course.findUnique({
@@ -207,7 +215,7 @@ export async function GET(req: NextRequest) {
       });
       courses = course ? [course] : [];
     } else if (studentId) {
-      // For studentId, we need to get courses through courseStudents
+      // Optimized query for student courses
       const student = await prisma.student.findUnique({
         where: { id: studentId },
         include: {
@@ -221,6 +229,8 @@ export async function GET(req: NextRequest) {
                       firstName: true,
                       lastName: true,
                       email: true,
+                      phoneNumber: true,
+                      profilePhoto: true,
                     },
                   },
                   lessons: includeLessons
@@ -293,12 +303,14 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    const { title, description, tutorId, studentIds } = validationResult.data;
+    const { title, description, zoomLink, tutorId, studentIds } =
+      validationResult.data;
     // Create course first
     const course = await prisma.course.create({
       data: {
         title,
         description,
+        zoomLink,
         tutorId,
       },
       include: {
@@ -416,7 +428,8 @@ export async function DELETE(req: NextRequest) {
 export async function PATCH(req: NextRequest) {
   try {
     const body = await req.json();
-    const { courseId, studentIds, tutorId, title, description } = body;
+    const { courseId, studentIds, tutorId, title, description, zoomLink } =
+      body;
 
     if (!courseId || !tutorId) {
       return NextResponse.json(
@@ -438,12 +451,17 @@ export async function PATCH(req: NextRequest) {
     }
 
     // If updating course details
-    if (title !== undefined || description !== undefined) {
+    if (
+      title !== undefined ||
+      description !== undefined ||
+      zoomLink !== undefined
+    ) {
       const updatedCourse = await prisma.course.update({
         where: { id: courseId },
         data: {
           ...(title !== undefined && { title }),
           ...(description !== undefined && { description }),
+          ...(zoomLink !== undefined && { zoomLink }),
         },
         include: {
           lessons: true,

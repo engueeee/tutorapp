@@ -11,7 +11,7 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, memo } from "react";
 
 interface RevenueCardProps {
   monthlyRevenue: number;
@@ -31,7 +31,7 @@ function formatCurrency(value: number, currency: string = "EUR") {
   });
 }
 
-export function RevenueCard({
+export const RevenueCard = memo(function RevenueCard({
   monthlyRevenue,
   weeklyRevenue,
   monthlyGrowthPercentage,
@@ -43,9 +43,38 @@ export function RevenueCard({
 }: RevenueCardProps) {
   const [viewMode, setViewMode] = useState<"month" | "week">("month");
   const [mounted, setMounted] = useState(false);
-  const currentGrowthPercentage =
-    viewMode === "week" ? weeklyGrowthPercentage : monthlyGrowthPercentage;
-  const isPositiveGrowth = currentGrowthPercentage >= 0;
+
+  // Memoize computed values to prevent unnecessary recalculations
+  const currentGrowthPercentage = useMemo(
+    () =>
+      viewMode === "week" ? weeklyGrowthPercentage : monthlyGrowthPercentage,
+    [viewMode, weeklyGrowthPercentage, monthlyGrowthPercentage]
+  );
+
+  const isPositiveGrowth = useMemo(
+    () => currentGrowthPercentage >= 0,
+    [currentGrowthPercentage]
+  );
+
+  const currentRevenue = useMemo(
+    () => (viewMode === "week" ? weeklyRevenue : monthlyRevenue),
+    [viewMode, weeklyRevenue, monthlyRevenue]
+  );
+
+  const currentData = useMemo(
+    () => (viewMode === "week" ? weeklyData : monthlyData),
+    [viewMode, weeklyData, monthlyData]
+  );
+
+  const growthText = useMemo(
+    () =>
+      `${isPositiveGrowth ? "+" : ""}${currentGrowthPercentage.toFixed(
+        1
+      )}% depuis ${
+        viewMode === "week" ? "la dernière semaine" : "le dernier mois"
+      }`,
+    [isPositiveGrowth, currentGrowthPercentage, viewMode]
+  );
 
   useEffect(() => {
     setMounted(true);
@@ -53,7 +82,7 @@ export function RevenueCard({
 
   if (!mounted) {
     return (
-      <Card className="p-6 bg-white border-[#dfb529]">
+      <Card className="p-6 bg-white border-secondary">
         <div className="animate-pulse">
           <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
           <div className="h-8 bg-gray-200 rounded w-1/2 mb-4"></div>
@@ -64,7 +93,7 @@ export function RevenueCard({
   }
 
   return (
-    <Card className="p-6 bg-white border-[#dfb529]">
+    <Card className="p-6 bg-white border-secondary">
       {/* Header with Toggle */}
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-medium text-gray-600">{title}</h3>
@@ -90,11 +119,8 @@ export function RevenueCard({
 
       {/* Revenue and Growth */}
       <div className="mb-6">
-        <div className="text-3xl font-bold text-[#050f8b] mb-2">
-          {formatCurrency(
-            viewMode === "week" ? weeklyRevenue : monthlyRevenue,
-            currency
-          )}
+        <div className="text-3xl font-bold text-primary mb-2">
+          {formatCurrency(currentRevenue, currency)}
         </div>
         <div className="flex items-center gap-2">
           {isPositiveGrowth ? (
@@ -104,12 +130,10 @@ export function RevenueCard({
           )}
           <span
             className={`text-sm font-medium ${
-              isPositiveGrowth ? "text-green-600" : "text-red-600"
+              isPositiveGrowth ? "text-green-500" : "text-red-500 "
             }`}
           >
-            {isPositiveGrowth ? "+" : ""}
-            {currentGrowthPercentage.toFixed(1)}% from last{" "}
-            {viewMode === "week" ? "week" : "month"}
+            {growthText}
           </span>
         </div>
       </div>
@@ -118,7 +142,7 @@ export function RevenueCard({
       <div className="h-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            data={viewMode === "week" ? weeklyData : monthlyData}
+            data={currentData}
             margin={{ top: 5, right: 5, left: 5, bottom: 20 }}
           >
             <XAxis
@@ -175,4 +199,4 @@ export function RevenueCard({
       </div>
     </Card>
   );
-}
+});

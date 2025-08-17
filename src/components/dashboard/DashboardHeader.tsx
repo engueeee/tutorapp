@@ -74,6 +74,12 @@ export function DashboardHeader({
           icon: BarChart3,
           active: pathname.startsWith("/dashboard/tutor/revenue"),
         },
+        {
+          href: "/dashboard/tutor/settings",
+          label: "Paramètres",
+          icon: Settings,
+          active: pathname.startsWith("/dashboard/tutor/settings"),
+        },
       ];
     } else {
       return [
@@ -94,6 +100,12 @@ export function DashboardHeader({
           label: "Mes cours",
           icon: BookOpen,
           active: pathname.startsWith("/dashboard/student/courses"),
+        },
+        {
+          href: "/dashboard/student/settings",
+          label: "Paramètres",
+          icon: Settings,
+          active: pathname.startsWith("/dashboard/student/settings"),
         },
       ];
     }
@@ -132,7 +144,7 @@ export function DashboardHeader({
                       href={item.href}
                       className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                         item.active
-                          ? "bg-primary text-white"
+                          ? "bg-primary text-white font-bold"
                           : "text-gray-600 hover:text-primary hover:bg-gray-50"
                       }`}
                     >
@@ -196,7 +208,7 @@ export function DashboardHeader({
                     href={item.href}
                     className={`flex items-center gap-3 px-3 py-2 rounded-md text-base font-medium transition-colors ${
                       item.active
-                        ? "bg-primary text-white"
+                        ? "bg-primary text-white font-bold"
                         : "text-gray-600 hover:text-primary hover:bg-gray-50"
                     }`}
                     onClick={() => setIsMobileMenuOpen(false)}

@@ -73,8 +73,16 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { firstName, lastName, age, email, grade, tutorId, hourlyRate } =
-      body;
+    const {
+      firstName,
+      lastName,
+      age,
+      email,
+      grade,
+      tutorId,
+      hourlyRate,
+      phoneNumber,
+    } = body;
 
     if (
       typeof firstName !== "string" ||
@@ -94,6 +102,7 @@ export async function POST(req: NextRequest) {
         age,
         email: email ?? null,
         grade: grade ?? null,
+        phoneNumber: phoneNumber ?? null,
         tutorId,
         hourlyRate: hourlyRate ?? null,
       },

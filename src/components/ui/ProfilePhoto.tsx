@@ -42,6 +42,7 @@ export function ProfilePhoto({
         src={user.profilePhoto}
         alt={`${user.firstName || user.email} profile`}
         className={`${sizeClasses[size]} rounded-full object-cover border-2 border-gray-200 ${className}`}
+        style={{ objectPosition: "center" }}
       />
     );
   }

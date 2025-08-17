@@ -17,6 +17,13 @@ model User {
   phoneNumber String? // Phone number for contact
   profilePhoto String? // URL to profile photo
   onboardingCompleted Boolean @default(false) // Track if onboarding is completed
+  
+  // Tutor-specific fields
+  bio       String? // Biography/description for tutors
+  subjects  String[] // Subjects taught by tutor
+  experience String? // Teaching experience description
+  education String? // Education level/background
+  
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -30,6 +37,7 @@ model Course {
   id          String   @id @default(cuid())
   title       String
   description String?
+  zoomLink    String?  // Optional zoom link for the course
 
   tutor       User     @relation(fields: [tutorId], references: [id])
   tutorId     String

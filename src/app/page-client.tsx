@@ -3,103 +3,44 @@
 import { useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
-import { LoginForm } from "@/components/forms/LoginForm";
-import { RegisterForm } from "@/components/forms/RegisterForm";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-
-import { useState } from "react";
+import LandingPage from "@/components/landing/LandingPage";
+import { LoadingUI } from "@/components/ui/LoadingUI";
 
 export default function HomePageClient() {
-  const { user, setUser, setToken } = useAuth();
+  const { user, loading } = useAuth();
   const router = useRouter();
-  const [showLogin, setShowLogin] = useState(true);
-  const [loginLoading, setLoginLoading] = useState(false);
-  const [loginError, setLoginError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       if (user.role === "tutor") {
         router.replace("/dashboard/tutor");
       } else if (user.role === "student") {
         router.replace("/dashboard/student");
       }
     }
-  }, [user, router]);
+  }, [user, loading, router]);
 
-  const handleLogin = async ({
-    email,
-    password,
-  }: {
-    email: string;
-    password: string;
-  }) => {
-    setLoginLoading(true);
-    setLoginError(null);
-    try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const result = await res.json();
-      if (!res.ok) {
-        setLoginError(result.error || "Erreur inconnue");
-        return;
-      }
-      const { token, user } = result;
-      localStorage.setItem("token", token);
-      localStorage.setItem("user", JSON.stringify(user));
-      setUser(user);
-      setToken(token);
-      if (user.role === "tutor") {
-        router.replace("/dashboard/tutor");
-      } else if (user.role === "student") {
-        router.replace("/dashboard/student");
-      }
-    } catch (err) {
-      setLoginError("Erreur lors de la connexion");
-    } finally {
-      setLoginLoading(false);
-    }
-  };
+  // Show loading while auth is initializing
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <LoadingUI variant="page" message="Initialisation..." />
+      </div>
+    );
+  }
 
+  // Show landing page for non-authenticated users
+  if (!user) {
+    return <LandingPage />;
+  }
+
+  // Show loading while redirecting authenticated users
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-center text-2xl font-bold mb-2">
-            Bienvenue sur TutorApp
-          </CardTitle>
-          <div className="flex justify-center gap-2 mt-2">
-            <Button
-              variant={showLogin ? "primary" : "outline"}
-              onClick={() => setShowLogin(true)}
-              className="w-1/2"
-            >
-              Connexion
-            </Button>
-            <Button
-              variant={!showLogin ? "primary" : "outline"}
-              onClick={() => setShowLogin(false)}
-              className="w-1/2"
-            >
-              Inscription
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="py-6">
-          {showLogin ? (
-            <LoginForm
-              onLogin={handleLogin}
-              loading={loginLoading}
-              error={loginError}
-            />
-          ) : (
-            <RegisterForm />
-          )}
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+        <p className="text-gray-600">Redirection en cours...</p>
+      </div>
     </div>
   );
 }

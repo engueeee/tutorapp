@@ -13,9 +13,10 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
       <div
         ref={ref}
         className={cn(
-          "relative flex h-10 w-10 shrink-0 overflow-hidden rounded-full",
+          "relative flex shrink-0 overflow-hidden rounded-full",
           className
         )}
+        style={{ minWidth: "100%", minHeight: "100%" }}
         {...props}
       >
         {src ? (
@@ -23,6 +24,7 @@ const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
             src={src}
             alt={alt || "Avatar"}
             className="aspect-square h-full w-full object-cover"
+            style={{ objectPosition: "center" }}
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center rounded-full bg-muted">
@@ -47,7 +49,12 @@ const AvatarImage = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <img
     ref={ref}
-    className={cn("aspect-square h-full w-full object-cover", className)}
+    className={cn("h-full w-full object-cover", className)}
+    style={{
+      objectPosition: "center",
+      minWidth: "100%",
+      minHeight: "100%",
+    }}
     {...props}
   />
 ));

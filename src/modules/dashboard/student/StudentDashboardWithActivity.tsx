@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { useUpdateStudentActivity } from "@/hooks/useUpdateStudentActivity";
-import { CoursesSection } from "./CoursesSection";
-import { TutorInfoCard } from "./TutorInfoCard";
+import { StudentDashboardModule } from "./StudentDashboardModule";
 import { Lesson, Homework } from "../types";
 
 interface StudentDashboardWithActivityProps {
@@ -21,17 +20,21 @@ export function StudentDashboardWithActivity({
 }: StudentDashboardWithActivityProps) {
   const { updateActivity } = useUpdateStudentActivity();
 
-  useEffect(() => {
-    // Update student activity when dashboard loads
+  // Memoize safe data arrays to prevent unnecessary re-renders
+  const safeLessons = useMemo(() => lessons || [], [lessons]);
+  const safeHomework = useMemo(() => homework || [], [homework]);
+
+  // Memoize activity update function to prevent unnecessary re-renders
+  const handleActivityUpdate = useCallback(() => {
     if (studentId) {
       updateActivity(studentId);
     }
   }, [studentId, updateActivity]);
 
-  return (
-    <div className="space-y-8">
-      <CoursesSection studentId={studentId} />
-      <TutorInfoCard studentId={studentId} />
-    </div>
-  );
+  useEffect(() => {
+    // Update student activity when dashboard loads
+    handleActivityUpdate();
+  }, [handleActivityUpdate]);
+
+  return <StudentDashboardModule studentId={studentId} userName={userName} />;
 }

@@ -1,18 +1,22 @@
+import { useMemo } from "react";
 import { TutorDashboardHeader } from "./TutorDashboardHeader";
-import { CoursesSection } from "./CoursesSection";
+import { CourseModule } from "./CourseModule";
 import { StudentManager } from "@/components/dashboard/StudentManager";
 import { RevenueOverview } from "./RevenueOverview";
 import { GroupedLessonsList } from "../lessons/GroupedLessonsList";
-import { Course } from "../types";
+import { Course, Lesson } from "../types";
 
 interface TutorDashboardModuleProps {
   firstName: string;
   lastName: string;
   tutorId: string;
   courses: Course[];
-  lessons?: any[];
+  lessons?: Lesson[];
   onStudentAdded?: () => void;
   onLessonsChanged?: () => void;
+  onLessonDeleted?: (lessonId: string) => void;
+  onLessonUpdated?: (updatedLesson: Lesson) => void;
+  onLessonCreated?: (newLesson: Lesson) => void;
 }
 
 export function TutorDashboardModule({
@@ -23,23 +27,42 @@ export function TutorDashboardModule({
   lessons = [],
   onStudentAdded,
   onLessonsChanged,
+  onLessonDeleted,
+  onLessonUpdated,
+  onLessonCreated,
 }: TutorDashboardModuleProps) {
+  // Memoize safe lessons array to prevent unnecessary re-renders
+  const safeLessons = useMemo(() => lessons || [], [lessons]);
+
+  // Memoize safe courses array to prevent unnecessary re-renders
+  const safeCourses = useMemo(() => courses || [], [courses]);
+
+  // Memoize user display name to prevent unnecessary re-renders
+  const userDisplayName = useMemo(
+    () => ({
+      firstName: firstName || "",
+      lastName: lastName || "",
+    }),
+    [firstName, lastName]
+  );
+
   return (
-    <main className="p-6 space-y-8">
-      <TutorDashboardHeader firstName={firstName} lastName={lastName} />
-      <RevenueOverview />
-      <CoursesSection
-        courses={courses}
-        tutorId={tutorId}
-        onCourseChanged={onStudentAdded}
-        onLessonCreated={onLessonsChanged}
+    <div className="space-y-6">
+      <TutorDashboardHeader
+        firstName={userDisplayName.firstName}
+        lastName={userDisplayName.lastName}
       />
+      <RevenueOverview />
+      <CourseModule tutorId={tutorId} onCourseChanged={onStudentAdded} />
       <StudentManager tutorId={tutorId} onStudentAdded={onStudentAdded} />
       <GroupedLessonsList
-        lessons={lessons}
+        lessons={safeLessons}
         tutorId={tutorId}
         onLessonsChanged={onLessonsChanged}
+        onLessonDeleted={onLessonDeleted}
+        onLessonUpdated={onLessonUpdated}
+        onLessonCreated={onLessonCreated}
       />
-    </main>
+    </div>
   );
 }

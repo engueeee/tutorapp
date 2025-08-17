@@ -5,6 +5,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DatePicker } from "@/components/ui/datepicker";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { LoadingUI } from "@/components/ui/LoadingUI";
 import { RevenueHistogram } from "@/components/dashboard/RevenueHistogram";
 import {
   LineChart,
@@ -37,7 +39,11 @@ import {
   X,
   Users,
   BookOpen,
+  Download,
+  FileText,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 const FILTERS = [
   { value: "day", label: "Jour" },
@@ -147,7 +153,7 @@ interface LessonDetail {
 }
 
 export default function RevenueDashboardPageClient() {
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [filter, setFilter] = useState("month");
 
   // Helper function to get current period label
@@ -167,6 +173,7 @@ export default function RevenueDashboardPageClient() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
   const [showLessonDetails, setShowLessonDetails] = useState(false);
+  const [generatingPDF, setGeneratingPDF] = useState(false);
 
   // Fetch courses and students for filters
   useEffect(() => {
@@ -297,11 +304,37 @@ export default function RevenueDashboardPageClient() {
   return (
     <div className="max-w-6xl mx-auto py-8 px-4">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-[#050f8b] mb-2">Revenus</h1>
-        <p className="text-gray-600">
-          Suivez vos performances et tendances financières
-        </p>
+      <div className="mb-8 flex justify-between items-start">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary-400 text-transparent bg-clip-text mb-2">
+            Revenus
+          </h1>
+          <p className="text-gray-600">
+            Suivez vos performances et tendances financières
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="border-primary text-primary hover:bg-primary/10 flex items-center gap-2"
+            onClick={() => {
+              // Vérifier l'authentification avant d'ouvrir la nouvelle page
+              if (!user || !token) {
+                alert(
+                  "Vous devez être connecté pour accéder à l'export personnalisé"
+                );
+                return;
+              }
+
+              // Ouvrir la page dans un nouvel onglet
+              // Le token est déjà dans localStorage, donc le nouveau contexte devrait pouvoir l'utiliser
+              window.open("/dashboard/tutor/revenue/export", "_blank");
+            }}
+          >
+            <FileText className="h-4 w-4" />
+            Export personnalisé
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -400,17 +433,15 @@ export default function RevenueDashboardPageClient() {
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-gray-500">Chargement...</div>
-        </div>
+        <LoadingUI variant="revenue" />
       ) : error ? (
         <div className="text-red-500 text-center mb-4">{error}</div>
       ) : (
-        <>
+        <div id="revenue-report">
           {/* First Row: Total Revenue and Histogram */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
             {/* Large Total Revenue Card */}
-            <Card className="p-8 bg-gradient-to-r from-[#050f8b] to-[#0a1f9b] text-white flex items-center justify-center">
+            <Card className="p-8 bg-gradient-to-r from-secondary/80 to-secondary-200/80 text-white flex items-center justify-center">
               <div className="text-center">
                 <div className="text-sm opacity-90 mb-2">
                   Revenu total ({getCurrentPeriodLabel().toLowerCase()})
@@ -467,12 +498,12 @@ export default function RevenueDashboardPageClient() {
 
           {/* Second Row: Key Metrics */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <Card className="p-6 bg-white border-[#dfb529]">
+            <Card className="p-6 bg-white border-secondary">
               <div className="text-center">
                 <div className="text-sm text-gray-600 mb-2">
                   Taux horaire moyen
                   {selectedStudent !== "all" && (
-                    <span className="text-xs text-[#dfb529] ml-1">
+                    <span className="text-xs text-secondary ml-1">
                       (
                       {
                         students.find((s) => s.id === selectedStudent)
@@ -483,22 +514,22 @@ export default function RevenueDashboardPageClient() {
                     </span>
                   )}
                   {selectedCourse !== "all" && selectedStudent === "all" && (
-                    <span className="text-xs text-[#dfb529] ml-1">
+                    <span className="text-xs text-secondary ml-1">
                       ({courses.find((c) => c.id === selectedCourse)?.title})
                     </span>
                   )}
                 </div>
-                <div className="text-2xl font-bold text-[#050f8b]">
+                <div className="text-2xl font-bold text-primary">
                   {formatCurrency(averageRate)}
                 </div>
               </div>
             </Card>
-            <Card className="p-6 bg-white border-[#dfb529]">
+            <Card className="p-6 bg-white border-secondary">
               <div className="text-center">
                 <div className="text-sm text-gray-600 mb-2">
                   Leçons terminées
                   {selectedStudent !== "all" && (
-                    <span className="text-xs text-[#dfb529] ml-1">
+                    <span className="text-xs text-secondary ml-1">
                       (
                       {
                         students.find((s) => s.id === selectedStudent)
@@ -509,22 +540,22 @@ export default function RevenueDashboardPageClient() {
                     </span>
                   )}
                   {selectedCourse !== "all" && selectedStudent === "all" && (
-                    <span className="text-xs text-[#dfb529] ml-1">
+                    <span className="text-xs text-secondary ml-1">
                       ({courses.find((c) => c.id === selectedCourse)?.title})
                     </span>
                   )}
                 </div>
-                <div className="text-2xl font-bold text-[#050f8b]">
+                <div className="text-2xl font-bold text-primary">
                   {lessonsCompleted}
                 </div>
               </div>
             </Card>
-            <Card className="p-6 bg-white border-[#dfb529]">
+            <Card className="p-6 bg-white border-secondary">
               <div className="text-center">
                 <div className="text-sm text-gray-600 mb-2">
                   Revenu projeté
                   {selectedStudent !== "all" && (
-                    <span className="text-xs text-[#dfb529] ml-1">
+                    <span className="text-xs text-secondary ml-1">
                       (
                       {
                         students.find((s) => s.id === selectedStudent)
@@ -535,12 +566,12 @@ export default function RevenueDashboardPageClient() {
                     </span>
                   )}
                   {selectedCourse !== "all" && selectedStudent === "all" && (
-                    <span className="text-xs text-[#dfb529] ml-1">
+                    <span className="text-xs text-secondary ml-1">
                       ({courses.find((c) => c.id === selectedCourse)?.title})
                     </span>
                   )}
                 </div>
-                <div className="text-2xl font-bold text-[#050f8b]">
+                <div className="text-2xl font-bold text-primary">
                   {formatCurrency(projectedRevenue)}
                 </div>
               </div>
@@ -548,18 +579,18 @@ export default function RevenueDashboardPageClient() {
           </div>
 
           {/* Third Row: Line Chart */}
-          <Card className="p-6 bg-white border-[#dfb529] mb-8">
+          <Card className="p-6 bg-white border-secondary mb-8">
             <div className="mb-6">
-              <h3 className="text-lg font-semibold text-[#050f8b] mb-2">
+              <h3 className="text-lg font-semibold text-primary mb-2">
                 Évolution des revenus
                 {selectedStudent !== "all" && (
-                  <span className="text-sm text-[#dfb529] ml-2">
+                  <span className="text-sm text-secondary ml-2">
                     ({students.find((s) => s.id === selectedStudent)?.firstName}{" "}
                     {students.find((s) => s.id === selectedStudent)?.lastName})
                   </span>
                 )}
                 {selectedCourse !== "all" && selectedStudent === "all" && (
-                  <span className="text-sm text-[#dfb529] ml-2">
+                  <span className="text-sm text-secondary ml-2">
                     ({courses.find((c) => c.id === selectedCourse)?.title})
                   </span>
                 )}
@@ -630,12 +661,12 @@ export default function RevenueDashboardPageClient() {
 
           {/* Fourth Row: Lesson Details */}
           {lessonDetails.length > 0 && (
-            <Card className="p-6 bg-white border-[#dfb529]">
+            <Card className="p-6 bg-white border-secondary">
               <div className="mb-6">
-                <h3 className="text-lg font-semibold text-[#050f8b] mb-2">
+                <h3 className="text-lg font-semibold text-primary mb-2">
                   Détail des leçons
                   {selectedStudent !== "all" && (
-                    <span className="text-sm text-[#dfb529] ml-2">
+                    <span className="text-sm text-secondary ml-2">
                       (
                       {
                         students.find((s) => s.id === selectedStudent)
@@ -646,7 +677,7 @@ export default function RevenueDashboardPageClient() {
                     </span>
                   )}
                   {selectedCourse !== "all" && selectedStudent === "all" && (
-                    <span className="text-sm text-[#dfb529] ml-2">
+                    <span className="text-sm text-secondary ml-2">
                       ({courses.find((c) => c.id === selectedCourse)?.title})
                     </span>
                   )}
@@ -675,7 +706,7 @@ export default function RevenueDashboardPageClient() {
                         </p>
                       </div>
                       <div className="text-right">
-                        <div className="text-lg font-bold text-[#050f8b]">
+                        <div className="text-lg font-bold text-primary">
                           {formatCurrency(lesson.revenue)}
                         </div>
                         <div className="text-sm text-gray-500">
@@ -708,7 +739,7 @@ export default function RevenueDashboardPageClient() {
                                 {formatDuration(lesson.duration)} ×{" "}
                                 {formatCurrency(student.hourlyRate)}/h
                               </span>
-                              <span className="font-medium text-[#050f8b]">
+                              <span className="font-medium text-primary">
                                 = {formatCurrency(student.contribution)}
                               </span>
                             </div>
@@ -721,7 +752,7 @@ export default function RevenueDashboardPageClient() {
               </div>
             </Card>
           )}
-        </>
+        </div>
       )}
     </div>
   );

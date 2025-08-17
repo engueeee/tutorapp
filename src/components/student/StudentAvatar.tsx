@@ -46,17 +46,43 @@ export function StudentAvatar({
     lg: "top-1 right-1",
   };
 
+  // Helper function to ensure the image URL is properly formatted
+  const getImageUrl = (url: string | null | undefined): string | null => {
+    if (!url) return null;
+
+    // If it's already an absolute URL, return as is
+    if (url.startsWith("http://") || url.startsWith("https://")) {
+      return url;
+    }
+
+    // If it's a relative URL, make it absolute
+    if (url.startsWith("/")) {
+      return `${window.location.origin}${url}`;
+    }
+
+    // If it's a data URL, return as is
+    if (url.startsWith("data:")) {
+      return url;
+    }
+
+    // Default case: assume it's a relative URL
+    return `${window.location.origin}/${url}`;
+  };
+
+  const imageUrl = getImageUrl(student.profilePhoto);
+
   return (
     <div className={`relative inline-block ${className}`}>
       {/* Profile Picture */}
       <div
         className={`relative ${sizeClasses[size]} rounded-full overflow-hidden`}
       >
-        {student.profilePhoto ? (
+        {imageUrl ? (
           <img
-            src={student.profilePhoto}
+            src={imageUrl}
             alt={`${student.firstName} ${student.lastName} profile`}
             className="w-full h-full object-cover"
+            style={{ objectPosition: "center" }}
             onError={(e) => {
               // Fallback to initials if image fails to load
               const target = e.target as HTMLImageElement;
@@ -75,7 +101,7 @@ export function StudentAvatar({
         {/* Fallback Avatar with Initials */}
         <div
           className={`fallback-avatar ${
-            student.profilePhoto ? "hidden" : "flex"
+            imageUrl ? "hidden" : "flex"
           } items-center justify-center w-full h-full bg-gradient-to-br ${getDefaultAvatarColor(
             student.id
           )} text-white font-semibold ${
@@ -84,21 +110,6 @@ export function StudentAvatar({
         >
           {getStudentInitials(student.firstName, student.lastName)}
         </div>
-
-        {/* Default Avatar Icon (if no photo and no initials) */}
-        {!student.profilePhoto && (
-          <div className="flex items-center justify-center w-full h-full bg-gray-300 text-gray-600">
-            <User
-              className={
-                size === "sm"
-                  ? "w-4 h-4"
-                  : size === "md"
-                  ? "w-6 h-6"
-                  : "w-8 h-8"
-              }
-            />
-          </div>
-        )}
       </div>
 
       {/* Status Badge */}

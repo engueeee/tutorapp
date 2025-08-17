@@ -84,13 +84,24 @@ export function QuickLessonCreationModal({
 
       setLoadingStudents(true);
       try {
-        const res = await fetch(`/api/students?tutorId=${tutorId}`);
+        // Fetch the course with its students to get only the students registered for this course
+        const res = await fetch(
+          `/api/courses?courseId=${currentSelectedCourseId}&includeStudents=true`
+        );
         if (res.ok) {
-          const data = await res.json();
-          setStudents(data);
+          const coursesData = await res.json();
+          const course = coursesData[0]; // Get the first (and only) course
+          if (course && course.students) {
+            setStudents(course.students);
+          } else {
+            setStudents([]);
+          }
+        } else {
+          setStudents([]);
         }
       } catch (error) {
         console.error("Error fetching students:", error);
+        setStudents([]);
       } finally {
         setLoadingStudents(false);
       }
@@ -375,15 +386,22 @@ export function QuickLessonCreationModal({
           {/* Students Selection */}
           <div className="space-y-2">
             <Label className="text-sm font-medium">
-              Étudiants * ({selectedStudentIds.length} sélectionné(s))
+              Étudiants inscrits au cours * ({selectedStudentIds.length}{" "}
+              sélectionné(s))
             </Label>
             {loadingStudents ? (
               <div className="text-sm text-gray-500">
-                Chargement des étudiants...
+                Chargement des étudiants inscrits...
               </div>
             ) : students.length === 0 ? (
-              <div className="text-sm text-gray-500">
-                Aucun étudiant disponible pour ce cours
+              <div className="text-sm text-gray-500 p-4 border rounded-md bg-yellow-50">
+                <div className="font-medium text-yellow-800 mb-1">
+                  Aucun étudiant inscrit
+                </div>
+                <div className="text-yellow-700">
+                  Ce cours n'a pas d'étudiants inscrits. Veuillez d'abord
+                  ajouter des étudiants au cours avant de créer une leçon.
+                </div>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-40 overflow-y-auto border rounded-md p-2">
@@ -426,7 +444,7 @@ export function QuickLessonCreationModal({
             </Button>
             <Button
               type="submit"
-              disabled={loading}
+              disabled={loading || students.length === 0}
               className="bg-[#050f8b] hover:bg-[#050f8b]/90"
             >
               {loading ? "Création..." : "Créer la leçon"}

@@ -34,13 +34,12 @@ export function UniversalOnboarding({
     firstName: initialData?.firstName || "",
     lastName: initialData?.lastName || "",
     email: initialData?.email || "",
-    phone: initialData?.phone || "",
+    phone: initialData?.phoneNumber || "",
     bio: initialData?.bio || "",
     subjects: initialData?.subjects || [],
-    hourlyRate: initialData?.hourlyRate || "",
     experience: initialData?.experience || "",
     education: initialData?.education || "",
-    photoUrl: initialData?.photoUrl || "",
+    photoUrl: initialData?.profilePhoto || "",
   });
 
   const handleInputChange = (field: string, value: string | string[]) => {
@@ -66,25 +65,51 @@ export function UniversalOnboarding({
 
   const handleComplete = async () => {
     try {
-      // Update user profile with onboarding data
-      const response = await fetch(`/api/users/${entityId}`, {
+      // Choose the appropriate API endpoint based on role
+      const endpoint =
+        role === "student"
+          ? `/api/students/${entityId}`
+          : `/api/users/${entityId}`;
+
+      // Prepare the data based on role
+      const requestData =
+        role === "student"
+          ? {
+              firstName: formData.firstName,
+              lastName: formData.lastName,
+              email: formData.email,
+              phoneNumber: formData.phone,
+              profilePhoto: formData.photoUrl,
+              grade: formData.education, // Map education to grade for students
+              onboardingCompleted: true,
+            }
+          : {
+              ...formData,
+              phoneNumber: formData.phone, // Map phone to phoneNumber for API
+              profilePhoto: formData.photoUrl, // Map photoUrl to profilePhoto for API
+              onboardingCompleted: true,
+            };
+
+      const response = await fetch(endpoint, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          ...formData,
-          onboardingCompleted: true,
-        }),
+        body: JSON.stringify(requestData),
       });
 
       if (response.ok) {
         onComplete();
       } else {
-        console.error("Failed to complete onboarding");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Failed to complete onboarding:", errorData);
+        throw new Error(
+          `Failed to complete onboarding: ${errorData.error || "Unknown error"}`
+        );
       }
     } catch (error) {
       console.error("Error completing onboarding:", error);
+      throw error;
     }
   };
 
@@ -156,33 +181,70 @@ export function UniversalOnboarding({
                     id="bio"
                     value={formData.bio}
                     onChange={(e) => handleInputChange("bio", e.target.value)}
-                    placeholder="Parlez-nous de votre expérience..."
+                    placeholder="Parlez-nous de votre expérience d'enseignement, vos spécialités, votre approche pédagogique..."
                     rows={4}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="hourlyRate">Tarif horaire (€)</Label>
-                  <Input
-                    id="hourlyRate"
-                    type="number"
-                    value={formData.hourlyRate}
+                  <Label htmlFor="subjects">Matières enseignées</Label>
+                  <Textarea
+                    id="subjects"
+                    value={formData.subjects.join(", ")}
                     onChange={(e) =>
-                      handleInputChange("hourlyRate", e.target.value)
+                      handleInputChange("subjects", e.target.value.split(", "))
                     }
-                    placeholder="25"
+                    placeholder="Mathématiques, Physique, Chimie, Anglais..."
+                    rows={3}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="experience">Expérience</Label>
+                  <Label htmlFor="experience">Expérience d'enseignement</Label>
                   <Textarea
                     id="experience"
                     value={formData.experience}
                     onChange={(e) =>
                       handleInputChange("experience", e.target.value)
                     }
-                    placeholder="Décrivez votre expérience..."
+                    placeholder="Décrivez votre expérience en tant qu'enseignant, le nombre d'années, les types d'élèves..."
                     rows={3}
                   />
+                </div>
+                <div>
+                  <Label htmlFor="education">Formation</Label>
+                  <Select
+                    value={formData.education}
+                    onValueChange={(value) =>
+                      handleInputChange("education", value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Sélectionnez votre niveau d'études" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bac">Bac</SelectItem>
+                      <SelectItem value="bac+2">Bac+2</SelectItem>
+                      <SelectItem value="bac+3">Bac+3</SelectItem>
+                      <SelectItem value="bac+4">Bac+4</SelectItem>
+                      <SelectItem value="bac+5">Bac+5</SelectItem>
+                      <SelectItem value="doctorat">Doctorat</SelectItem>
+                      <SelectItem value="autre">Autre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="photoUrl">Photo de profil</Label>
+                  <Input
+                    id="photoUrl"
+                    type="url"
+                    value={formData.photoUrl}
+                    onChange={(e) =>
+                      handleInputChange("photoUrl", e.target.value)
+                    }
+                    placeholder="https://example.com/photo.jpg"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Ajoutez l'URL de votre photo de profil (optionnel)
+                  </p>
                 </div>
               </>
             ) : (
@@ -209,17 +271,21 @@ export function UniversalOnboarding({
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div>
-                  <Label htmlFor="subjects">Matières d'intérêt</Label>
-                  <Textarea
-                    id="subjects"
-                    value={formData.subjects.join(", ")}
+                  <Label htmlFor="photoUrl">Photo de profil</Label>
+                  <Input
+                    id="photoUrl"
+                    type="url"
+                    value={formData.photoUrl}
                     onChange={(e) =>
-                      handleInputChange("subjects", e.target.value.split(", "))
+                      handleInputChange("photoUrl", e.target.value)
                     }
-                    placeholder="Mathématiques, Physique, Chimie..."
-                    rows={3}
+                    placeholder="https://example.com/photo.jpg"
                   />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Ajoutez l'URL de votre photo de profil (optionnel)
+                  </p>
                 </div>
               </>
             )}
@@ -242,13 +308,21 @@ export function UniversalOnboarding({
                 <p>
                   <strong>Téléphone:</strong> {formData.phone}
                 </p>
+                {formData.photoUrl && (
+                  <p>
+                    <strong>Photo de profil:</strong> Ajoutée
+                  </p>
+                )}
                 {role === "tutor" && (
                   <>
                     <p>
-                      <strong>Tarif horaire:</strong> {formData.hourlyRate}€
+                      <strong>Bio:</strong> {formData.bio.substring(0, 50)}...
                     </p>
                     <p>
-                      <strong>Bio:</strong> {formData.bio.substring(0, 50)}...
+                      <strong>Matières:</strong> {formData.subjects.join(", ")}
+                    </p>
+                    <p>
+                      <strong>Formation:</strong> {formData.education}
                     </p>
                   </>
                 )}
@@ -256,9 +330,6 @@ export function UniversalOnboarding({
                   <>
                     <p>
                       <strong>Niveau:</strong> {formData.education}
-                    </p>
-                    <p>
-                      <strong>Matières:</strong> {formData.subjects.join(", ")}
                     </p>
                   </>
                 )}
@@ -283,7 +354,9 @@ export function UniversalOnboarding({
             Bienvenue {userName} ! 👋
           </CardTitle>
           <p className="text-center text-gray-600">
-            Complétez votre profil pour commencer
+            {role === "tutor"
+              ? "Complétez votre profil de tuteur pour commencer"
+              : "Complétez votre profil pour commencer"}
           </p>
         </CardHeader>
         <CardContent>

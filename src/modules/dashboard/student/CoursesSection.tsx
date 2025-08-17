@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, User, Calendar, Clock } from "lucide-react";
+import { BookOpen, User, Calendar, Clock, Video } from "lucide-react";
 import { LoadingSkeleton } from "@/components/ui/loading-skeleton";
 
 interface CoursesSectionProps {
@@ -12,6 +12,7 @@ interface CourseWithTutor {
   id: string;
   title: string;
   description?: string | null;
+  zoomLink?: string | null;
   tutorId: string;
   createdAt: string;
   tutor: {
@@ -195,6 +196,19 @@ export function CoursesSection({ studentId }: CoursesSectionProps) {
                   <p className="text-gray-600 text-sm mb-3 line-clamp-2">
                     {course.description}
                   </p>
+                )}
+                {course.zoomLink && (
+                  <div className="flex items-center gap-2 text-sm mb-3">
+                    <Video className="h-4 w-4 text-blue-600" />
+                    <a
+                      href={course.zoomLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:text-blue-800 underline"
+                    >
+                      Lien Zoom
+                    </a>
+                  </div>
                 )}
 
                 <div className="space-y-2 text-sm">

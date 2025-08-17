@@ -39,6 +39,10 @@ export interface User {
   phoneNumber?: string;
   profilePhoto?: string;
   onboardingCompleted?: boolean;
+  bio?: string;
+  subjects?: string[];
+  experience?: string;
+  education?: string;
 }
 
 export type UserRegisterPayload = {

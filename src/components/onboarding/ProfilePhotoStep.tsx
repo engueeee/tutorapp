@@ -61,6 +61,7 @@ export function ProfilePhotoStep({
                   src={photoUrl}
                   alt="Profile"
                   className="w-full h-full object-cover"
+                  style={{ objectPosition: "center" }}
                 />
               ) : (
                 <User className="w-16 h-16 text-gray-400" />

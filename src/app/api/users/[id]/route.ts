@@ -8,22 +8,38 @@ export async function GET(
 ) {
   const { id } = await params;
   const userId = id;
+  const { searchParams } = new URL(req.url);
+  const includeAll = searchParams.get("includeAll") === "true";
 
   try {
+    // Base fields that are always included
+    const baseSelect = {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      onboardingCompleted: true,
+    };
+
+    // Additional fields that can be included
+    const extendedSelect = includeAll
+      ? {
+          ...baseSelect,
+          phoneNumber: true,
+          profilePhoto: true,
+          bio: true,
+          subjects: true,
+          experience: true,
+          education: true,
+          createdAt: true,
+          updatedAt: true,
+        }
+      : baseSelect;
+
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        phoneNumber: true,
-        profilePhoto: true,
-        onboardingCompleted: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: extendedSelect,
     });
 
     if (!user) {
@@ -53,6 +69,10 @@ export async function PATCH(
     phoneNumber,
     profilePhoto,
     onboardingCompleted,
+    bio,
+    subjects,
+    experience,
+    education,
   } = await req.json();
 
   try {
@@ -64,6 +84,10 @@ export async function PATCH(
         phoneNumber,
         profilePhoto,
         onboardingCompleted,
+        bio,
+        subjects,
+        experience,
+        education,
       },
     });
     return NextResponse.json(updated);
